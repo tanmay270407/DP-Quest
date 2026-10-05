@@ -503,7 +503,7 @@ Explicit Rejection Targets: ${trustedProblem.rejectionSignatures?.join(', ') || 
 
 Perform strict independent checks across all stages and return the structured assessment.`;
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-pro-preview'];
+    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-pro-preview'];
     let response: any = null;
     let lastError: any = null;
     let geminiRequestStatus = 'FAIL';
@@ -625,8 +625,9 @@ Perform strict independent checks across all stages and return the structured as
           }
         } catch (callErr: any) {
           lastError = callErr;
-          console.warn(`[PROOF_VERIFY] Gemini model ${modelName} attempt error: ${callErr.status || callErr.message}`);
-          if (callErr.status === 429 || String(callErr.message).includes('429')) {
+          const status = callErr.status || (callErr.message?.includes('503') ? 503 : (callErr.message?.includes('429') ? 429 : 'transient'));
+          console.info(`[PROOF_VERIFY] Candidate ${modelName} returned status ${status}; rotating to next candidate.`);
+          if (status === 429 || status === 503 || String(callErr.message).includes('429') || String(callErr.message).includes('503')) {
             retries--;
             if (retries >= 0) {
               await new Promise((resolve) => setTimeout(resolve, 300));

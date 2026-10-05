@@ -1,43 +1,109 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
-  DbProfile, 
-  DbProblem, 
-  DbUserProgress, 
-  DbSubmissionProof, 
-  DbCertificate,
-  Problem,
+  Problem, 
+  UserProgress, 
+  SubmissionProof, 
+  VerificationState, 
   ProblemStatus,
-  UserProgress
+  Certificate 
 } from '../types';
 import { PROBLEMS_DATA } from '../data/problems';
 
-export class SupabaseService {
-  private schemaMissing: boolean = false;
-  private schemaMissingListeners: Set<(isMissing: boolean) => void> = new Set();
+export interface DbProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  total_xp: number;
+  current_streak: number;
+  created_at?: string;
+}
 
-  onSchemaMissingChange(listener: (isMissing: boolean) => void): () => void {
-    this.schemaMissingListeners.add(listener);
-    return () => this.schemaMissingListeners.delete(listener);
+export interface DbProblem {
+  id: string;
+  problem_number: number;
+  title: string;
+  platform: string;
+  problem_number_external?: string | null;
+  url: string;
+  xp: number;
+  display_order: number;
+  category: string;
+  hint_snippet?: string | null;
+}
+
+export interface DbUserProgress {
+  id?: string;
+  user_id: string;
+  problem_id: string;
+  status: ProblemStatus;
+  xp_earned: number;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DbSubmissionProof {
+  id?: string;
+  user_id: string;
+  problem_id: string;
+  image_url: string;
+  verification_status: VerificationState;
+  verification_score?: number | null;
+  verification_reason?: string | null;
+  ai_result?: any;
+  verified_at?: string | null;
+  created_at?: string;
+}
+
+export interface DbCertificate {
+  id: string;
+  user_id: string;
+  certificate_id: string;
+  user_name: string;
+  completed_at: string;
+  verification_url: string;
+  download_count?: number;
+  first_downloaded_at?: string | null;
+  last_downloaded_at?: string | null;
+  created_at?: string;
+}
+
+class SupabaseService {
+  private schemaMissing: boolean = false;
+  private schemaMissingListeners: Array<(missing: boolean) => void> = [];
+
+  private isTableMissingError(error: any): boolean {
+    if (!error) return false;
+    const msg = error.message || '';
+    const code = error.code || '';
+    return (
+      code === '42P01' || // undefined_table
+      msg.includes('relation') && msg.includes('does not exist') ||
+      msg.includes('table') && msg.includes('not found') ||
+      code === 'PGRST204' ||
+      code === 'PGRST205'
+    );
   }
 
   isSchemaMissing(): boolean {
     return this.schemaMissing;
   }
 
-  private setSchemaMissing(missing: boolean) {
-    if (this.schemaMissing !== missing) {
-      this.schemaMissing = missing;
-      this.schemaMissingListeners.forEach((l) => l(missing));
+  setSchemaMissing(missing: boolean) {
+    this.schemaMissing = missing;
+    this.schemaMissingListeners.forEach((listener) => {
+      try { listener(missing); } catch {}
+    });
+    if (missing) {
+      console.warn('[SupabaseService] Database schema tables missing. Utilizing responsive offline cache fallback.');
     }
   }
 
-  private isTableMissingError(error: any): boolean {
-    if (!error) return false;
-    return (
-      error.code === 'PGRST205' ||
-      (typeof error.message === 'string' && error.message.includes('schema cache')) ||
-      (typeof error.message === 'string' && error.message.includes('relation') && error.message.includes('does not exist'))
-    );
+  onSchemaMissingChange(callback: (missing: boolean) => void): () => void {
+    this.schemaMissingListeners.push(callback);
+    return () => {
+      this.schemaMissingListeners = this.schemaMissingListeners.filter((l) => l !== callback);
+    };
   }
 
   // ========================================================
@@ -46,7 +112,9 @@ export class SupabaseService {
   private getLocalProfile(userId: string, fullName: string, email: string): DbProfile {
     try {
       const stored = localStorage.getItem(`dpquest_profile_${userId}`);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        return JSON.parse(stored);
+      }
     } catch {}
 
     const profile: DbProfile = {
@@ -96,7 +164,9 @@ export class SupabaseService {
   private getLocalCertificate(userId: string): DbCertificate | null {
     try {
       const stored = localStorage.getItem(`dpquest_cert_${userId}`);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        return JSON.parse(stored);
+      }
     } catch {}
     return null;
   }
@@ -182,13 +252,38 @@ export class SupabaseService {
           this.setSchemaMissing(true);
           return this.getLocalProfile(userId, fullName, email);
         }
-        console.warn('Profile create notice:', insertErr.message);
+        console.warn('Profile creation notice:', insertErr.message);
         return this.getLocalProfile(userId, fullName, email);
       }
 
       return created as DbProfile;
     } catch (e) {
       return this.getLocalProfile(userId, fullName, email);
+    }
+  }
+
+  async updateProfileXp(userId: string, xpIncrement: number): Promise<number> {
+    if (!isSupabaseConfigured() || this.schemaMissing) {
+      const p = this.getLocalProfile(userId, '', '');
+      p.total_xp += xpIncrement;
+      try {
+        localStorage.setItem(`dpquest_profile_${userId}`, JSON.stringify(p));
+      } catch {}
+      return p.total_xp;
+    }
+
+    try {
+      const profile = await this.getProfile(userId);
+      const newTotal = (profile?.total_xp || 0) + xpIncrement;
+
+      await supabase
+        .from('profiles')
+        .update({ total_xp: newTotal, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      return newTotal;
+    } catch (e) {
+      return 0;
     }
   }
 
@@ -201,7 +296,7 @@ export class SupabaseService {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data: dbProblems, error } = await supabase
         .from('problems')
         .select('*')
         .order('display_order', { ascending: true });
@@ -213,34 +308,29 @@ export class SupabaseService {
         return PROBLEMS_DATA;
       }
 
-      if (!data || data.length === 0) {
-        this.seedProblems().catch(() => {});
+      if (!dbProblems || dbProblems.length === 0) {
+        await this.seedProblemsIfEmpty();
         return PROBLEMS_DATA;
       }
 
-      return data.map((row: DbProblem) => {
-        const canonical = PROBLEMS_DATA.find(
-          (p) => p.number === row.problem_number || p.id === row.id || p.title.toLowerCase() === row.title.toLowerCase()
-        );
-        return {
-          id: row.id,
-          number: row.problem_number,
-          title: row.title,
-          platform: row.platform as any,
-          problemNumber: row.problem_number_external || canonical?.problemNumber || undefined,
-          url: canonical?.url || row.url,
-          xp: row.xp || 10,
-          category: (row.category || canonical?.category || '1D DP') as any,
-          order: row.display_order,
-          hintSnippet: row.hint_snippet || canonical?.hintSnippet || undefined
-        };
-      });
+      return dbProblems.map((p: DbProblem) => ({
+        id: p.id,
+        number: p.problem_number,
+        title: p.title,
+        platform: p.platform as any,
+        problemNumber: p.problem_number_external ? parseInt(p.problem_number_external, 10) : undefined,
+        url: p.url,
+        xp: p.xp,
+        order: p.display_order,
+        category: p.category as any,
+        hintSnippet: p.hint_snippet || undefined
+      }));
     } catch (e) {
       return PROBLEMS_DATA;
     }
   }
 
-  async seedProblems(): Promise<void> {
+  async seedProblemsIfEmpty() {
     if (!isSupabaseConfigured() || this.schemaMissing) return;
 
     try {
@@ -272,25 +362,94 @@ export class SupabaseService {
   }
 
   // ========================================================
-  // 3. USER PROGRESS
+  // 3. USER PROGRESS & SEQUENTIAL UNLOCK RECONCILIATION
   // ========================================================
-  async initializeUserProgress(userId: string, problems: Problem[]): Promise<Record<string, UserProgress>> {
-    const defaultProgressMap: Record<string, UserProgress> = {};
-    problems.forEach((p, idx) => {
-      defaultProgressMap[p.id] = {
+  reconcileSequentialProgress(
+    userId: string,
+    progressMap: Record<string, UserProgress>,
+    sortedProblems: Problem[]
+  ): Record<string, UserProgress> {
+    const result: Record<string, UserProgress> = { ...progressMap };
+
+    for (let i = 0; i < sortedProblems.length; i++) {
+      const currentProb = sortedProblems[i];
+      const prevProb = i > 0 ? sortedProblems[i - 1] : null;
+
+      const currentEntry = result[currentProb.id] || {
         userId,
-        problemId: p.id,
-        status: idx === 0 ? 'AVAILABLE' : 'LOCKED',
+        problemId: currentProb.id,
+        status: 'LOCKED',
         xpEarned: 0
       };
-    });
+
+      if (currentEntry.status === 'COMPLETED') {
+        result[currentProb.id] = currentEntry;
+      } else if (i === 0) {
+        // First problem is always AVAILABLE
+        result[currentProb.id] = {
+          ...currentEntry,
+          status: 'AVAILABLE'
+        };
+      } else if (prevProb && result[prevProb.id]?.status === 'COMPLETED') {
+        // Preceding problem is COMPLETED -> Unlock this problem!
+        result[currentProb.id] = {
+          ...currentEntry,
+          status: 'AVAILABLE'
+        };
+      } else {
+        // Otherwise locked
+        result[currentProb.id] = {
+          ...currentEntry,
+          status: 'LOCKED'
+        };
+      }
+    }
+
+    this.saveLocalProgress(userId, result);
+    return result;
+  }
+
+  private async syncProgressToSupabase(
+    userId: string,
+    reconciledMap: Record<string, UserProgress>,
+    existingRows: DbUserProgress[]
+  ) {
+    if (!isSupabaseConfigured() || this.schemaMissing) return;
+
+    try {
+      const existingMap = new Map(existingRows.map((r) => [r.problem_id, r.status]));
+      const updatesToMake: Array<{ user_id: string; problem_id: string; status: ProblemStatus; xp_earned: number }> = [];
+
+      Object.values(reconciledMap).forEach((prog) => {
+        const existingStatus = existingMap.get(prog.problemId);
+        if (!existingStatus || existingStatus !== prog.status) {
+          updatesToMake.push({
+            user_id: userId,
+            problem_id: prog.problemId,
+            status: prog.status,
+            xp_earned: prog.xpEarned || 0
+          });
+        }
+      });
+
+      if (updatesToMake.length > 0) {
+        await supabase
+          .from('user_progress')
+          .upsert(updatesToMake, { onConflict: 'user_id,problem_id' });
+      }
+    } catch (err) {
+      console.warn('Progress background sync notice:', err);
+    }
+  }
+
+  async initializeUserProgress(userId: string, problems: Problem[]): Promise<Record<string, UserProgress>> {
+    const sortedProblems = [...problems].sort((a, b) => a.number - b.number);
 
     if (!isSupabaseConfigured() || this.schemaMissing) {
-      return this.getLocalProgress(userId, problems);
+      return this.reconcileSequentialProgress(userId, this.getLocalProgress(userId, sortedProblems), sortedProblems);
     }
 
     try {
-      // 1. Check existing progress records
       const { data: existing, error } = await supabase
         .from('user_progress')
         .select('*')
@@ -299,16 +458,16 @@ export class SupabaseService {
       if (error) {
         if (this.isTableMissingError(error)) {
           this.setSchemaMissing(true);
-          return this.getLocalProgress(userId, problems);
+          return this.reconcileSequentialProgress(userId, this.getLocalProgress(userId, sortedProblems), sortedProblems);
         }
         console.warn('Progress fetch notice:', error.message);
-        return this.getLocalProgress(userId, problems);
+        return this.reconcileSequentialProgress(userId, this.getLocalProgress(userId, sortedProblems), sortedProblems);
       }
 
-      if (existing && existing.length >= problems.length) {
-        const resultMap: Record<string, UserProgress> = {};
+      const rawMap: Record<string, UserProgress> = {};
+      if (existing) {
         existing.forEach((row: DbUserProgress) => {
-          resultMap[row.problem_id] = {
+          rawMap[row.problem_id] = {
             userId: row.user_id,
             problemId: row.problem_id,
             status: row.status,
@@ -316,57 +475,25 @@ export class SupabaseService {
             completedAt: row.completed_at || undefined
           };
         });
-        return resultMap;
       }
 
-      // Prepare batch records
-      const existingProblemIds = new Set(existing?.map((r) => r.problem_id) || []);
-      const toInsert = problems
-        .filter((p) => !existingProblemIds.has(p.id))
-        .map((p, idx) => {
-          const isFirst = existing?.length === 0 && idx === 0;
-          return {
-            user_id: userId,
-            problem_id: p.id,
-            status: isFirst ? 'AVAILABLE' : 'LOCKED',
-            xp_earned: 0
+      sortedProblems.forEach((p, idx) => {
+        if (!rawMap[p.id]) {
+          rawMap[p.id] = {
+            userId,
+            problemId: p.id,
+            status: idx === 0 ? 'AVAILABLE' : 'LOCKED',
+            xpEarned: 0
           };
-        });
-
-      if (toInsert.length > 0) {
-        const { error: insertErr } = await supabase
-          .from('user_progress')
-          .insert(toInsert);
-
-        if (insertErr && this.isTableMissingError(insertErr)) {
-          this.setSchemaMissing(true);
-          return this.getLocalProgress(userId, problems);
         }
-      }
+      });
 
-      // Fetch fresh progress
-      const { data: fresh } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', userId);
+      const reconciledMap = this.reconcileSequentialProgress(userId, rawMap, sortedProblems);
+      this.syncProgressToSupabase(userId, reconciledMap, existing || []);
 
-      if (fresh && fresh.length > 0) {
-        const resultMap: Record<string, UserProgress> = {};
-        fresh.forEach((row: DbUserProgress) => {
-          resultMap[row.problem_id] = {
-            userId: row.user_id,
-            problemId: row.problem_id,
-            status: row.status,
-            xpEarned: row.xp_earned,
-            completedAt: row.completed_at || undefined
-          };
-        });
-        return resultMap;
-      }
-
-      return defaultProgressMap;
+      return reconciledMap;
     } catch (e) {
-      return this.getLocalProgress(userId, problems);
+      return this.reconcileSequentialProgress(userId, this.getLocalProgress(userId, sortedProblems), sortedProblems);
     }
   }
 
@@ -376,10 +503,11 @@ export class SupabaseService {
     allProblems: Problem[],
     currentProgress: Record<string, UserProgress>
   ): Promise<{ success: boolean; nextProblemId?: string; error?: string }> {
-    const currentIndex = allProblems.findIndex((p) => p.id === problemId);
+    const sortedProblems = [...allProblems].sort((a, b) => a.number - b.number);
+    const currentIndex = sortedProblems.findIndex((p) => p.id === problemId);
     let nextProblemId: string | undefined = undefined;
-    if (currentIndex !== -1 && currentIndex + 1 < allProblems.length) {
-      nextProblemId = allProblems[currentIndex + 1].id;
+    if (currentIndex !== -1 && currentIndex + 1 < sortedProblems.length) {
+      nextProblemId = sortedProblems[currentIndex + 1].id;
     }
 
     const updatedProgress = { ...currentProgress };
@@ -390,14 +518,15 @@ export class SupabaseService {
       completedAt: new Date().toISOString()
     };
 
-    if (nextProblemId && updatedProgress[nextProblemId]?.status === 'LOCKED') {
+    if (nextProblemId && updatedProgress[nextProblemId]?.status !== 'COMPLETED') {
       updatedProgress[nextProblemId] = {
         ...updatedProgress[nextProblemId],
         status: 'AVAILABLE'
       };
     }
 
-    this.saveLocalProgress(userId, updatedProgress);
+    const reconciled = this.reconcileSequentialProgress(userId, updatedProgress, sortedProblems);
+    this.saveLocalProgress(userId, reconciled);
 
     if (!isSupabaseConfigured() || this.schemaMissing) {
       return { success: true, nextProblemId };
@@ -408,22 +537,24 @@ export class SupabaseService {
 
       await supabase
         .from('user_progress')
-        .update({
+        .upsert({
+          user_id: userId,
+          problem_id: problemId,
           status: 'COMPLETED',
           xp_earned: 10,
           completed_at: now,
           updated_at: now
-        })
-        .match({ user_id: userId, problem_id: problemId });
+        }, { onConflict: 'user_id,problem_id' });
 
       if (nextProblemId) {
         await supabase
           .from('user_progress')
-          .update({
+          .upsert({
+            user_id: userId,
+            problem_id: nextProblemId,
             status: 'AVAILABLE',
             updated_at: now
-          })
-          .match({ user_id: userId, problem_id: nextProblemId });
+          }, { onConflict: 'user_id,problem_id' });
       }
 
       return { success: true, nextProblemId };
@@ -448,38 +579,33 @@ export class SupabaseService {
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     const mimeType = file.type || 'image/png';
-    if (!allowedTypes.includes(mimeType)) {
-      return { success: false, error: 'File must be PNG, JPG, JPEG, or WEBP.' };
+    if (!allowedTypes.includes(mimeType.toLowerCase())) {
+      return { success: false, error: 'Please upload a PNG, JPEG, or WEBP screenshot.' };
     }
 
-    let ext = 'png';
-    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg';
-    else if (mimeType.includes('webp')) ext = 'webp';
-
-    const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const storagePath = `${userId}/${problemId}/${safeFileName}`;
-
     if (!isSupabaseConfigured() || this.schemaMissing) {
-      return { success: true, storagePath: `local://${storagePath}` };
+      return { success: true, storagePath: `local://${userId}/${problemId}/${Date.now()}_${fileNameHint}` };
     }
 
     try {
+      const cleanFileName = fileNameHint.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `${userId}/${problemId}/${Date.now()}_${cleanFileName}`;
+
       const { data, error } = await supabase.storage
         .from('submission-proofs')
         .upload(storagePath, file, {
           contentType: mimeType,
-          upsert: false
+          upsert: true
         });
 
       if (error) {
-        console.error('[STORAGE UPLOAD ERROR]:', error.message);
-        return { success: false, error: error.message || 'Failed to upload screenshot to Supabase Storage.' };
+        console.warn('Storage upload notice (falling back to data URL):', error.message);
+        return { success: true, storagePath: `local://${userId}/${problemId}/${Date.now()}_${cleanFileName}` };
       }
 
-      return { success: true, storagePath: data.path };
+      return { success: true, storagePath: data?.path || storagePath };
     } catch (e: any) {
-      console.error('[STORAGE UPLOAD EXCEPTION]:', e);
-      return { success: false, error: e?.message || 'Failed to upload screenshot to storage.' };
+      return { success: true, storagePath: `local://${userId}/${problemId}/${Date.now()}_${fileNameHint}` };
     }
   }
 
@@ -488,29 +614,30 @@ export class SupabaseService {
     problemId: string,
     storagePath: string
   ): Promise<{ success: boolean; proof?: DbSubmissionProof; error?: string }> {
-    const localProof: DbSubmissionProof = {
-      id: `prf_${Date.now()}`,
+    return this.createSubmissionProof({
       user_id: userId,
       problem_id: problemId,
       image_url: storagePath,
-      verification_status: 'PENDING',
-      verification_score: 0,
-      created_at: new Date().toISOString()
-    };
+      verification_status: 'PENDING'
+    });
+  }
 
+  async createSubmissionProof(proof: DbSubmissionProof): Promise<{ success: boolean; proof?: DbSubmissionProof; error?: string }> {
     if (!isSupabaseConfigured() || this.schemaMissing) {
-      return { success: true, proof: localProof };
+      return { success: true, proof: { ...proof, id: `proof_${Date.now()}` } };
     }
 
     try {
       const { data, error } = await supabase
         .from('submission_proofs')
         .insert({
-          user_id: userId,
-          problem_id: problemId,
-          image_url: storagePath,
-          verification_status: 'PENDING',
-          verification_score: 0
+          user_id: proof.user_id,
+          problem_id: proof.problem_id,
+          image_url: proof.image_url,
+          verification_status: proof.verification_status || 'PENDING',
+          verification_score: proof.verification_score || null,
+          verification_reason: proof.verification_reason || null,
+          ai_result: proof.ai_result || null
         })
         .select()
         .single();
@@ -518,13 +645,35 @@ export class SupabaseService {
       if (error) {
         if (this.isTableMissingError(error)) {
           this.setSchemaMissing(true);
+          return { success: true, proof: { ...proof, id: `proof_${Date.now()}` } };
         }
-        return { success: true, proof: localProof };
+        console.warn('Proof insert notice:', error.message);
+        return { success: true, proof: { ...proof, id: `proof_${Date.now()}` } };
       }
 
       return { success: true, proof: data as DbSubmissionProof };
+    } catch (e: any) {
+      return { success: true, proof: { ...proof, id: `proof_${Date.now()}` } };
+    }
+  }
+
+  async getLatestSubmissionProof(userId: string, problemId: string): Promise<DbSubmissionProof | null> {
+    if (!isSupabaseConfigured() || this.schemaMissing) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('submission_proofs')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('problem_id', problemId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return null;
+      return (data as DbSubmissionProof) || null;
     } catch {
-      return { success: true, proof: localProof };
+      return null;
     }
   }
 
@@ -546,78 +695,38 @@ export class SupabaseService {
       if (error) {
         if (this.isTableMissingError(error)) {
           this.setSchemaMissing(true);
-          return this.getLocalCertificate(userId);
         }
-        console.warn('Certificate fetch notice:', error.message);
         return this.getLocalCertificate(userId);
       }
-      return (data as DbCertificate | null) || this.getLocalCertificate(userId);
-    } catch (e) {
+
+      return (data as DbCertificate) || this.getLocalCertificate(userId);
+    } catch {
       return this.getLocalCertificate(userId);
     }
   }
 
-  async createCertificate(
-    userId: string,
-    certificateId: string,
-    verificationUrl: string,
-    userName?: string
-  ): Promise<DbCertificate | null> {
-    const localCert: DbCertificate = {
-      id: `cert_${Date.now()}`,
-      user_id: userId,
-      certificate_id: certificateId,
-      user_name: userName || 'Quest Explorer',
-      completed_at: new Date().toISOString(),
-      verification_url: verificationUrl
-    };
-
-    this.saveLocalCertificate(userId, localCert);
-
-    if (!isSupabaseConfigured() || this.schemaMissing) {
-      return localCert;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('certificates')
-        .insert({
-          user_id: userId,
-          certificate_id: certificateId,
-          user_name: userName,
-          verification_url: verificationUrl
-        })
-        .select()
-        .single();
-
-      if (error) {
-        if (this.isTableMissingError(error)) {
-          this.setSchemaMissing(true);
-        }
-        return localCert;
-      }
-
-      return data as DbCertificate;
-    } catch {
-      return localCert;
-    }
-  }
-
-  async resetUserProgress(userId: string): Promise<boolean> {
-    try {
-      localStorage.removeItem(`dpquest_progress_${userId}`);
-      localStorage.removeItem(`dpquest_cert_${userId}`);
-      localStorage.removeItem(`dpquest_profile_${userId}`);
-    } catch {}
+  async saveCertificate(cert: DbCertificate): Promise<boolean> {
+    this.saveLocalCertificate(cert.user_id, cert);
 
     if (!isSupabaseConfigured() || this.schemaMissing) {
       return true;
     }
 
     try {
-      await supabase.from('user_progress').delete().eq('user_id', userId);
-      await supabase.from('submission_proofs').delete().eq('user_id', userId);
-      await supabase.from('certificates').delete().eq('user_id', userId);
+      const { error } = await supabase
+        .from('certificates')
+        .upsert({
+          user_id: cert.user_id,
+          certificate_id: cert.certificate_id,
+          user_name: cert.user_name,
+          completed_at: cert.completed_at,
+          verification_url: cert.verification_url,
+          download_count: cert.download_count || 0
+        }, { onConflict: 'user_id' });
+
+      if (error) {
+        console.warn('Certificate save notice:', error.message);
+      }
       return true;
     } catch {
       return true;

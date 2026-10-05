@@ -1101,6 +1101,40 @@ Respond strictly in JSON according to the schema provided.`;
           }
         }
 
+        // Unlock next sequential problem in user_progress if not already completed
+        const nextProblemNum = Math.min(25, problem.number + 1);
+        if (nextProblemNum <= 25 && nextProblemNum !== problem.number) {
+          try {
+            const { data: nextDbProb } = await supabase
+              .from('problems')
+              .select('id')
+              .eq('problem_number', nextProblemNum)
+              .maybeSingle();
+
+            const nextUuid = nextDbProb?.id || `dp-${String(nextProblemNum).padStart(2, '0')}`;
+
+            const { data: nextProg } = await supabase
+              .from('user_progress')
+              .select('status')
+              .eq('user_id', authenticatedUserId)
+              .eq('problem_id', nextUuid)
+              .maybeSingle();
+
+            if (!nextProg || nextProg.status !== 'COMPLETED') {
+              await supabase
+                .from('user_progress')
+                .upsert({
+                  user_id: authenticatedUserId,
+                  problem_id: nextUuid,
+                  status: 'AVAILABLE',
+                  updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id,problem_id' });
+            }
+          } catch (nextErr) {
+            console.warn('[VERIFY_PROOF] Next problem unlock notice:', nextErr);
+          }
+        }
+
         // Update Profile XP
         const { data: profile } = await supabase
           .from('profiles')

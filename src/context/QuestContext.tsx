@@ -257,8 +257,10 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const isVerified = verifyRes.status === 'VERIFIED' || Boolean(verifyRes.success);
 
       if (isVerified && verifyRes.success) {
-        // Mark COMPLETED in state and unlock next sequential problem
-        const nextProbId = verifyRes.nextProblemId;
+        // Mark COMPLETED in state and reconcile sequential unlocking
+        const sortedProblems = [...problems].sort((a, b) => a.number - b.number);
+        const currentIndex = sortedProblems.findIndex((p) => p.id === problemId);
+        const nextProb = currentIndex !== -1 && currentIndex + 1 < sortedProblems.length ? sortedProblems[currentIndex + 1] : null;
 
         setUserProgress((prev) => {
           const nextState = { ...prev };
@@ -270,14 +272,16 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             completedAt: new Date().toISOString()
           };
 
-          if (nextProbId && nextState[nextProbId]?.status === 'LOCKED') {
-            nextState[nextProbId] = {
-              ...nextState[nextProbId],
-              status: 'AVAILABLE'
+          if (nextProb && nextState[nextProb.id]?.status !== 'COMPLETED') {
+            nextState[nextProb.id] = {
+              userId: user.id,
+              problemId: nextProb.id,
+              status: 'AVAILABLE',
+              xpEarned: 0
             };
           }
 
-          return nextState;
+          return supabaseService.reconcileSequentialProgress(user.id, nextState, sortedProblems);
         });
 
         // Trigger background refresh from Supabase to stay 100% in sync

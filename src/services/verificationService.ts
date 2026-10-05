@@ -95,9 +95,9 @@ class VerificationService {
         return {
           status: (data.status as VerificationState) || 'FAILED',
           score: 0,
-          notes: data.error || "Verification couldn't be completed. Please try again.",
+          notes: data.reason || data.error || "Verification couldn't be completed. Please try again.",
           verifiedAt: new Date().toISOString(),
-          error: data.error,
+          error: data.error || data.reason,
           success: false
         };
       }

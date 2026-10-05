@@ -441,9 +441,9 @@ export class SupabaseService {
     file: File | Blob,
     fileNameHint: string = 'proof.png'
   ): Promise<{ success: boolean; storagePath?: string; error?: string }> {
-    const MAX_SIZE = 10 * 1024 * 1024;
+    const MAX_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      return { success: false, error: 'Image must be smaller than 10 MB.' };
+      return { success: false, error: 'Image must be smaller than 5 MB.' };
     }
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
@@ -472,13 +472,14 @@ export class SupabaseService {
         });
 
       if (error) {
-        // If storage bucket is missing, use local storage path gracefully
-        return { success: true, storagePath: `local://${storagePath}` };
+        console.error('[STORAGE UPLOAD ERROR]:', error.message);
+        return { success: false, error: error.message || 'Failed to upload screenshot to Supabase Storage.' };
       }
 
       return { success: true, storagePath: data.path };
     } catch (e: any) {
-      return { success: true, storagePath: `local://${storagePath}` };
+      console.error('[STORAGE UPLOAD EXCEPTION]:', e);
+      return { success: false, error: e?.message || 'Failed to upload screenshot to storage.' };
     }
   }
 

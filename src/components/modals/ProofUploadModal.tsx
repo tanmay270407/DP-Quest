@@ -59,10 +59,10 @@ export const ProofUploadModal: React.FC = () => {
       return false;
     }
 
-    // 2. File size validation (10 MB)
-    const MAX_SIZE = 10 * 1024 * 1024;
+    // 2. File size validation (5 MB)
+    const MAX_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      setValidationError('Image must be smaller than 10 MB.');
+      setValidationError('Image must be smaller than 5 MB.');
       return false;
     }
 

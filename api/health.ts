@@ -1,3 +1,5 @@
-import app from '../src/server/app';
+import { handleHealth } from '../src/server/apiRouter';
 
-export default app;
+export default async function handler(req: any, res: any) {
+  return handleHealth(req, res);
+}

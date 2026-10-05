@@ -348,6 +348,8 @@ class SupabaseService {
 
       if (currentEntry.status === 'COMPLETED') {
         result[currentProb.id] = currentEntry;
+      } else if (currentEntry.status === 'VERIFYING') {
+        result[currentProb.id] = currentEntry;
       } else if (i === 0) {
         // First problem is always AVAILABLE
         result[currentProb.id] = {
@@ -431,13 +433,32 @@ class SupabaseService {
       const rawMap: Record<string, UserProgress> = {};
       if (existing) {
         existing.forEach((row: DbUserProgress) => {
-          rawMap[row.problem_id] = {
-            userId: row.user_id,
-            problemId: row.problem_id,
-            status: row.status,
-            xpEarned: row.xp_earned,
-            completedAt: row.completed_at || undefined
-          };
+          let canonicalId = row.problem_id;
+          if (!canonicalId.startsWith('dp-')) {
+            const matchedProb = sortedProblems.find(
+              (p) => p.id === row.problem_id || String(p.number) === String(row.problem_id)
+            );
+            if (matchedProb) {
+              canonicalId = matchedProb.id;
+            } else {
+              const digits = String(row.problem_id).replace(/\D/g, '');
+              const num = parseInt(digits, 10);
+              if (!isNaN(num) && num >= 1 && num <= sortedProblems.length) {
+                canonicalId = sortedProblems[num - 1].id;
+              }
+            }
+          }
+
+          // If rawMap already has COMPLETED for this canonicalId, preserve COMPLETED
+          if (!rawMap[canonicalId] || row.status === 'COMPLETED') {
+            rawMap[canonicalId] = {
+              userId: row.user_id,
+              problemId: canonicalId,
+              status: row.status,
+              xpEarned: row.xp_earned,
+              completedAt: row.completed_at || undefined
+            };
+          }
         });
       }
 

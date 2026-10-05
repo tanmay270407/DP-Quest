@@ -308,6 +308,7 @@ export async function handleVerifyProof(req: any, res: any) {
         );
         trustedProblem = {
           ...recordById,
+          id: canonical?.id || `dp-${String(recordById.problem_number).padStart(2, '0')}`,
           url: canonical?.url || recordById.url,
           title: canonical?.title || recordById.title,
           problem_number_external: recordById.problem_number_external || (canonical?.problemNumber ? String(canonical.problemNumber) : null),
@@ -332,6 +333,7 @@ export async function handleVerifyProof(req: any, res: any) {
             );
             trustedProblem = {
               ...recordByNum,
+              id: canonical?.id || `dp-${String(recordByNum.problem_number).padStart(2, '0')}`,
               url: canonical?.url || recordByNum.url,
               title: canonical?.title || recordByNum.title,
               problem_number_external: recordByNum.problem_number_external || (canonical?.problemNumber ? String(canonical.problemNumber) : null),
@@ -845,15 +847,10 @@ Perform strict independent checks and return the structured assessment.`;
             finalTotalXp = profile?.total_xp ?? Math.min(220, finalCompletedCount * 10);
 
             const nextNum = trustedProblem.problem_number + 1;
-            const { data: nextProbRecord } = await dbClient
-              .from('problems')
-              .select('id, problem_number')
-              .eq('problem_number', nextNum)
-              .maybeSingle();
-
-            if (nextProbRecord) {
-              nextProblemUnlockedId = nextProbRecord.id;
-              nextProblemNumber = nextProbRecord.problem_number;
+            const canonicalNext = PROBLEMS_DATA.find((p) => p.number === nextNum);
+            if (nextNum <= 22) {
+              nextProblemUnlockedId = canonicalNext?.id || `dp-${String(nextNum).padStart(2, '0')}`;
+              nextProblemNumber = nextNum;
             }
           } else {
             // Record new completion
@@ -887,21 +884,18 @@ Perform strict independent checks and return the structured assessment.`;
 
             // Unlock next problem
             const nextProblemNum = trustedProblem.problem_number + 1;
-            const { data: nextProbRecord } = await dbClient
-              .from('problems')
-              .select('id, problem_number')
-              .eq('problem_number', nextProblemNum)
-              .maybeSingle();
+            const canonicalNext = PROBLEMS_DATA.find((p) => p.number === nextProblemNum);
 
-            if (nextProbRecord) {
-              nextProblemUnlockedId = nextProbRecord.id;
-              nextProblemNumber = nextProbRecord.problem_number;
+            if (nextProblemNum <= 22) {
+              const nextCanonicalId = canonicalNext?.id || `dp-${String(nextProblemNum).padStart(2, '0')}`;
+              nextProblemUnlockedId = nextCanonicalId;
+              nextProblemNumber = nextProblemNum;
 
               const { data: nextProgRecord } = await dbClient
                 .from('user_progress')
                 .select('id, status')
                 .eq('user_id', userId)
-                .eq('problem_id', nextProbRecord.id)
+                .eq('problem_id', nextCanonicalId)
                 .maybeSingle();
 
               if (!nextProgRecord) {
@@ -909,7 +903,7 @@ Perform strict independent checks and return the structured assessment.`;
                   .from('user_progress')
                   .insert({
                     user_id: userId,
-                    problem_id: nextProbRecord.id,
+                    problem_id: nextCanonicalId,
                     status: 'AVAILABLE',
                     xp_earned: 0,
                     updated_at: now
@@ -921,8 +915,7 @@ Perform strict independent checks and return the structured assessment.`;
                     status: 'AVAILABLE',
                     updated_at: now
                   })
-                  .eq('user_id', userId)
-                  .eq('problem_id', nextProbRecord.id);
+                  .eq('id', nextProgRecord.id);
               }
             }
 

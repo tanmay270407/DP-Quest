@@ -963,12 +963,22 @@ Respond strictly in JSON according to the schema provided.`;
 
     if (!geminiResultJson) {
       console.error('[GEMINI_VERIFY] All Gemini vision models failed:', geminiError);
+      const isQuota = (
+        geminiError?.status === 429 ||
+        geminiError?.message?.includes('429') ||
+        geminiError?.message?.includes('quota') ||
+        geminiError?.message?.includes('RESOURCE_EXHAUSTED')
+      );
+      const userReason = isQuota
+        ? 'AI verification daily quota reached for the free tier. Please try again in a moment or upload another proof.'
+        : 'AI verification service is temporarily unavailable. Please try submitting again in a moment.';
+
       return sendJson(res, 503, {
         success: false,
         status: 'REVIEW_REQUIRED',
         problemCompleted: false,
         xp_earned: 0,
-        reason: 'AI verification service is temporarily unavailable. Please try submitting again in a moment.',
+        reason: userReason,
         error: geminiError?.message || 'Gemini API unavailable'
       });
     }

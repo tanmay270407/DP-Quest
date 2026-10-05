@@ -136,7 +136,7 @@ export const ProfileView: React.FC = () => {
               Completed
             </div>
             <div className="text-base font-bold font-mono text-gray-900">
-              {completedCount} / 25
+              {completedCount} / 22
             </div>
           </div>
 

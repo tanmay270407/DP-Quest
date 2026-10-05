@@ -29,7 +29,7 @@ export const CompletionView: React.FC = () => {
         <div className="flex items-center justify-center gap-6 py-2">
           <div className="px-5 py-3 rounded-2xl neu-inset">
             <div className="text-xl font-bold font-mono text-gray-900">
-              {completedCount} / 25
+              {completedCount} / 22
             </div>
             <div className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider mt-0.5">
               Problems Solved

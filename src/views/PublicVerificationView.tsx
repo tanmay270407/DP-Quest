@@ -133,7 +133,7 @@ export const PublicVerificationView: React.FC<PublicVerificationViewProps> = ({
             Certificate Completion Statement
           </div>
           <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-sans text-center italic">
-            "This certificate is awarded in recognition of the successful completion of 25 Dynamic Programming problems from platforms including LeetCode, GeeksforGeeks (GFG), and CSES. Through this achievement, the student has demonstrated consistent effort and practical understanding of fundamental Dynamic Programming concepts, including recursion, memoization, tabulation, optimization, and problem-solving techniques across a diverse range of challenges."
+            "This certificate is awarded in recognition of the successful completion of 22 Dynamic Programming problems from platforms including LeetCode and GeeksforGeeks (GFG). Through this achievement, the student has demonstrated consistent effort and practical understanding of fundamental Dynamic Programming concepts, including recursion, memoization, tabulation, optimization, and problem-solving techniques across a diverse range of challenges."
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export const PublicVerificationView: React.FC<PublicVerificationViewProps> = ({
         <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
           <div className="p-3.5 rounded-2xl neu-inset">
             <div className="text-lg font-bold font-mono text-gray-900">
-              25 / 25
+              22 / 22
             </div>
             <div className="text-[10px] uppercase font-semibold text-gray-400">
               Problems Completed
@@ -150,7 +150,7 @@ export const PublicVerificationView: React.FC<PublicVerificationViewProps> = ({
 
           <div className="p-3.5 rounded-2xl neu-inset">
             <div className="text-lg font-bold font-mono text-gray-900">
-              250 XP
+              220 XP
             </div>
             <div className="text-[10px] uppercase font-semibold text-gray-400">
               Earned

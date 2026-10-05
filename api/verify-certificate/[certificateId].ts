@@ -47,8 +47,8 @@ export default async function handler(req: any, res: any) {
           certificateId: cert.certificate_id,
           userName: cert.user_name,
           completedAt: cert.completed_at,
-          totalProblems: 25,
-          totalXp: 250,
+          totalProblems: 22,
+          totalXp: 220,
           verificationUrl: cert.verification_url || `https://dp-quest-isju.vercel.app/verify/${cert.certificate_id}`
         });
       }

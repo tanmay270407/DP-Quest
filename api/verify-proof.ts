@@ -399,20 +399,6 @@ const PROBLEMS_METADATA: Record<string, {
   'dp-18': {
     id: 'dp-18',
     number: 18,
-    title: 'Dice Combinations',
-    canonicalTitle: 'Dice Combinations',
-    platform: 'CSES',
-    problemNumber: 1633,
-    xp: 10,
-    category: 'Counting DP',
-    conceptSignature: 'CSES 1633: Count number of ways to construct sum n by throwing a standard 1-6 die',
-    requiredConstraints: ['CSES Task 1633', 'Dice values 1..6', 'Sum n'],
-    acceptedTitleVariants: ['Dice Combinations', 'CSES - Dice Combinations', 'Dice Combinations - CSES'],
-    rejectionSignatures: ['Removing Digits', 'Coin Combinations I', 'Book Shop']
-  },
-  'dp-19': {
-    id: 'dp-19',
-    number: 19,
     title: 'Ways to Express N as Sum of 1, 3, 4',
     canonicalTitle: 'Ways to Express N as Sum of 1, 3, 4',
     platform: 'GFG',
@@ -425,33 +411,11 @@ const PROBLEMS_METADATA: Record<string, {
       'Count ways to express N as the sum of 1, 3 and 4',
       'Ways to write n as sum of 1, 3 and 4'
     ],
-    rejectionSignatures: ['Count Ways to Reach Nth Stair', 'Dice Combinations']
+    rejectionSignatures: ['Count Ways to Reach Nth Stair']
   },
-  'dp-20': {
-    id: 'dp-20',
-    number: 20,
-    title: 'Minimize Steps to Reach K from 0',
-    canonicalTitle: 'Minimize Steps to Reach K from 0',
-    platform: 'GFG',
-    xp: 10,
-    category: 'Optimization',
-    conceptSignature: 'Minimum operations to reach K starting from 0 using +1 or *2',
-    requiredConstraints: ['Start: 0', 'Allowed moves: +1, *2', 'Target: K/N'],
-    acceptedTitleVariants: [
-      'Minimize Steps to Reach K from 0',
-      'Minimum Operations',
-      'Find Optimum Operation',
-      'Minimum Operations to Reach N from 0'
-    ],
-    rejectionSignatures: [
-      'Minimum Operations to Obtain N (start 1 with *2, *3, +1)',
-      'Minimum number of jumps',
-      'Jump Game'
-    ]
-  },
-  'dp-21': {
-    id: 'dp-21',
-    number: 21,
+  'dp-19': {
+    id: 'dp-19',
+    number: 19,
     title: 'Minimum Operations to Obtain N',
     canonicalTitle: 'Minimum Operations to Obtain N',
     platform: 'GFG',
@@ -466,27 +430,12 @@ const PROBLEMS_METADATA: Record<string, {
       'Minimum Operations to reach N from 1'
     ],
     rejectionSignatures: [
-      'Minimize Steps to Reach K from 0 (start 0 with +1, *2)',
       'Minimum Operations (start 0)'
     ]
   },
-  'dp-22': {
-    id: 'dp-22',
-    number: 22,
-    title: 'Removing Digits',
-    canonicalTitle: 'Removing Digits',
-    platform: 'CSES',
-    problemNumber: 1637,
-    xp: 10,
-    category: 'Advanced',
-    conceptSignature: 'CSES 1637: Minimum steps to reach 0 by subtracting any digit present in the current number',
-    requiredConstraints: ['CSES Task 1637', 'Subtract digit d in n', 'Target: 0'],
-    acceptedTitleVariants: ['Removing Digits', 'CSES - Removing Digits', 'Removing Digits - CSES'],
-    rejectionSignatures: ['Dice Combinations', 'Removing Digits II', 'Coin Combinations']
-  },
-  'dp-23': {
-    id: 'dp-23',
-    number: 23,
+  'dp-20': {
+    id: 'dp-20',
+    number: 20,
     title: 'Maximize The Cut Segments',
     canonicalTitle: 'Maximize The Cut Segments',
     platform: 'GFG',
@@ -502,9 +451,9 @@ const PROBLEMS_METADATA: Record<string, {
     ],
     rejectionSignatures: ['Rod Cutting', 'Integer Break']
   },
-  'dp-24': {
-    id: 'dp-24',
-    number: 24,
+  'dp-21': {
+    id: 'dp-21',
+    number: 21,
     title: 'Geek and its Game of Coins',
     canonicalTitle: 'Geek and its Game of Coins',
     platform: 'GFG',
@@ -519,9 +468,9 @@ const PROBLEMS_METADATA: Record<string, {
     ],
     rejectionSignatures: ['Coin Change', 'Coin Combinations']
   },
-  'dp-25': {
-    id: 'dp-25',
-    number: 25,
+  'dp-22': {
+    id: 'dp-22',
+    number: 22,
     title: 'Chicks in a Zoo',
     canonicalTitle: 'Chicks in a Zoo',
     platform: 'GFG',
@@ -534,8 +483,8 @@ const PROBLEMS_METADATA: Record<string, {
   }
 };
 
-// Also index by number 1..25
-for (let i = 1; i <= 25; i++) {
+// Also index by number 1..22
+for (let i = 1; i <= 22; i++) {
   const padKey = `dp-${i < 10 ? '0' + i : i}`;
   const unpadKey = `dp-${i}`;
   if (PROBLEMS_METADATA[padKey] && !PROBLEMS_METADATA[unpadKey]) {
@@ -767,8 +716,8 @@ export default async function handler(req: any, res: any) {
             xp_earned: 0,
             total_xp: profile?.total_xp || 0,
             completed_count: count || 0,
-            next_problem_number: Math.min(25, problem.number + 1),
-            next_problem_id: `dp-${String(Math.min(25, problem.number + 1)).padStart(2, '0')}`,
+            next_problem_number: Math.min(22, problem.number + 1),
+            next_problem_id: `dp-${String(Math.min(22, problem.number + 1)).padStart(2, '0')}`,
             problemCompleted: true,
             score: 100,
             reason: 'You have already verified and completed this problem. No additional XP awarded.'
@@ -1123,8 +1072,8 @@ Respond strictly in JSON according to the schema provided.`;
         }
 
         // Unlock next sequential problem in user_progress if not already completed
-        const nextProblemNum = Math.min(25, problem.number + 1);
-        if (nextProblemNum <= 25 && nextProblemNum !== problem.number) {
+        const nextProblemNum = Math.min(22, problem.number + 1);
+        if (nextProblemNum <= 22 && nextProblemNum !== problem.number) {
           try {
             const { data: nextDbProb } = await supabase
               .from('problems')
@@ -1193,7 +1142,7 @@ Respond strictly in JSON according to the schema provided.`;
       }
     }
 
-    const nextNumber = Math.min(25, problem.number + 1);
+    const nextNumber = Math.min(22, problem.number + 1);
     const nextId = `dp-${String(nextNumber).padStart(2, '0')}`;
 
     return sendJson(res, 200, {

@@ -79,7 +79,7 @@ export const DashboardView: React.FC = () => {
               Quest Completion
             </div>
             <div className="text-2xl font-bold font-mono text-gray-900 mt-0.5">
-              {completedCount} <span className="text-sm font-sans text-gray-400">/ 25</span>
+              {completedCount} <span className="text-sm font-sans text-gray-400">/ 22</span>
             </div>
           </div>
 
@@ -88,7 +88,7 @@ export const DashboardView: React.FC = () => {
               Total XP Earned
             </div>
             <div className="text-2xl font-bold font-mono text-gray-900 mt-0.5">
-              {totalXp} <span className="text-sm font-sans text-gray-400">/ 250</span>
+              {totalXp} <span className="text-sm font-sans text-gray-400">/ 220</span>
             </div>
           </div>
         </div>
@@ -96,24 +96,24 @@ export const DashboardView: React.FC = () => {
         {/* Progress Bar */}
         <NeumorphicProgressBar 
           current={completedCount} 
-          total={25} 
+          total={22} 
           showLabels={false} 
           size="md" 
         />
 
         <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
-          <span>{25 - completedCount} problems remaining</span>
+          <span>{22 - completedCount} problems remaining</span>
           <span className="font-semibold text-gray-700">
-            {Math.round((completedCount / 25) * 100)}% Complete
+            {Math.round((completedCount / 22) * 100)}% Complete
           </span>
         </div>
       </NeumorphicCard>
 
-      {/* Compact 25-Problem Progress Indicator */}
+      {/* Compact 22-Problem Progress Indicator */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-sm font-bold tracking-wide uppercase text-gray-500">
-            Roadmap Overview (25 Problems)
+            Roadmap Overview (22 Problems)
           </h2>
           <button 
             onClick={() => navigateTo('problems')}
@@ -124,7 +124,7 @@ export const DashboardView: React.FC = () => {
         </div>
 
         <NeumorphicCard variant="raised-sm" className="p-4 md:p-5">
-          <div className="grid grid-cols-5 sm:grid-cols-10 md:grid-cols-25 gap-2">
+          <div className="grid grid-cols-5 sm:grid-cols-11 md:grid-cols-22 gap-2">
             {problems.map((prob) => {
               const status = userProgress[prob.id]?.status || 'LOCKED';
               const isCompleted = status === 'COMPLETED';

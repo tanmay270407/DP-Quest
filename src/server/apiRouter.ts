@@ -842,7 +842,7 @@ Perform strict independent checks and return the structured assessment.`;
               .eq('id', userId)
               .maybeSingle();
 
-            finalTotalXp = profile?.total_xp ?? Math.min(250, finalCompletedCount * 10);
+            finalTotalXp = profile?.total_xp ?? Math.min(220, finalCompletedCount * 10);
 
             const nextNum = trustedProblem.problem_number + 1;
             const { data: nextProbRecord } = await dbClient
@@ -934,7 +934,7 @@ Perform strict independent checks and return the structured assessment.`;
               .eq('status', 'COMPLETED');
 
             finalCompletedCount = completedRows?.length || 1;
-            finalTotalXp = Math.min(250, finalCompletedCount * 10);
+            finalTotalXp = Math.min(220, finalCompletedCount * 10);
 
             await dbClient
               .from('profiles')
@@ -1067,9 +1067,9 @@ export async function handleGenerateCertificate(req: any, res: any) {
       completedCount = progressRows?.length || 0;
       totalXp = progressRows ? progressRows.reduce((acc: number, r: any) => acc + (r.xp_earned || 0), 0) : 0;
 
-      if (completedCount < 25 || totalXp < 250) {
+      if (completedCount < 22 || totalXp < 220) {
         return sendJson(res, 403, {
-          error: `Certificate Locked. You have completed ${completedCount}/25 problems (${totalXp} XP). All 25 problems and 250 XP are required.`
+          error: `Certificate Locked. You have completed ${completedCount}/22 problems (${totalXp} XP). All 22 problems and 220 XP are required.`
         });
       }
 
@@ -1089,8 +1089,8 @@ export async function handleGenerateCertificate(req: any, res: any) {
             certificateId: existingCert.certificate_id,
             userName: existingCert.user_name || profileName,
             completedAt: existingCert.completed_at,
-            totalProblems: 25,
-            totalXp: 250,
+            totalProblems: 22,
+            totalXp: 220,
             verificationUrl: existingCert.verification_url,
             downloadCount: existingCert.download_count || 0,
             firstDownloadedAt: existingCert.first_downloaded_at,
@@ -1115,8 +1115,8 @@ export async function handleGenerateCertificate(req: any, res: any) {
           user_name: profileName,
           completed_at: now,
           verification_url: verificationUrl,
-          total_problems: 25,
-          total_xp: 250,
+          total_problems: 22,
+          total_xp: 220,
           download_count: 0
         })
         .select()
@@ -1134,8 +1134,8 @@ export async function handleGenerateCertificate(req: any, res: any) {
           certificateId: certificateId,
           userName: profileName,
           completedAt: now,
-          totalProblems: 25,
-          totalXp: 250,
+          totalProblems: 22,
+          totalXp: 220,
           verificationUrl: verificationUrl,
           downloadCount: 0,
           firstDownloadedAt: null,
@@ -1185,8 +1185,8 @@ export async function handleRecordCertificateDownload(req: any, res: any) {
       certificateId,
       userName,
       completedAt,
-      totalProblems = 25,
-      totalXp = 250,
+      totalProblems = 22,
+      totalXp = 220,
       verificationUrl,
       downloadedAt = new Date().toISOString()
     } = body;
@@ -1372,8 +1372,8 @@ export async function handleVerifyCertificate(req: any, res: any) {
             certificateId: rawId,
             userName: rawId.includes('-TEST') ? 'Nikhil (Test Explorer)' : 'Quest Explorer',
             completedAt: new Date().toISOString(),
-            totalProblems: 25,
-            totalXp: 250,
+            totalProblems: 22,
+            totalXp: 220,
             verificationUrl: `${baseUrl}/verify/${rawId}`
           });
         }
@@ -1401,8 +1401,8 @@ export async function handleVerifyCertificate(req: any, res: any) {
             certificateId: rawId,
             userName: 'Nikhil (Test Explorer)',
             completedAt: new Date().toISOString(),
-            totalProblems: 25,
-            totalXp: 250,
+            totalProblems: 22,
+            totalXp: 220,
             verificationUrl: `${baseUrl}/verify/${rawId}`
           });
         }
@@ -1419,8 +1419,8 @@ export async function handleVerifyCertificate(req: any, res: any) {
         certificateId: cert.certificate_id,
         userName: cert.user_name || 'Quest Graduate',
         completedAt: cert.completed_at,
-        totalProblems: 25,
-        totalXp: 250,
+        totalProblems: 22,
+        totalXp: 220,
         verificationUrl: cert.verification_url
       });
     } else {
@@ -1445,8 +1445,8 @@ export async function handleVerifyCertificate(req: any, res: any) {
           certificateId: rawId,
           userName: rawId.includes('-TEST') ? 'Nikhil (Test Explorer)' : 'Alex Rivera',
           completedAt: new Date().toISOString(),
-          totalProblems: 25,
-          totalXp: 250,
+          totalProblems: 22,
+          totalXp: 220,
           verificationUrl: `${baseUrl}/verify/${rawId}`
         });
       }

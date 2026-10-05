@@ -67,7 +67,7 @@ export const Sidebar: React.FC = () => {
             DP Quest
           </div>
           <div className="text-[11px] text-gray-500 font-medium tracking-tight mt-1">
-            25 Dynamic Problems
+            22 Dynamic Problems
           </div>
         </div>
       </div>
@@ -98,7 +98,7 @@ export const Sidebar: React.FC = () => {
               )}
               {item.id === 'problems' && (
                 <span className="text-[10px] font-mono text-gray-400">
-                  {completedCount}/25
+                  {completedCount}/22
                 </span>
               )}
             </button>
@@ -116,7 +116,7 @@ export const Sidebar: React.FC = () => {
             {totalXp} <span className="text-xs font-sans text-gray-500">XP</span>
           </div>
           <div className="text-[11px] text-gray-500 font-medium">
-            {completedCount} of 25 completed
+            {completedCount} of 22 completed
           </div>
         </div>
       </div>

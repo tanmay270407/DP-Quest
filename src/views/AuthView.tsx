@@ -110,7 +110,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
           </h1>
           <p className="text-xs text-gray-500">
             {mode === 'login' && 'Continue your Dynamic Programming progress.'}
-            {mode === 'signup' && 'Track all 25 DP problems and earn your certificate.'}
+            {mode === 'signup' && 'Track all 22 DP problems and earn your certificate.'}
             {mode === 'forgot' && "Enter your email to receive recovery instructions."}
           </p>
         </div>

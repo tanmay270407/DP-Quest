@@ -46,7 +46,7 @@ export const LandingView: React.FC = () => {
       <main className="max-w-2xl mx-auto w-full text-center my-auto py-12 space-y-10">
         <div className="space-y-4">
           <div className="inline-block px-4 py-1.5 rounded-full neu-inset text-xs font-semibold tracking-wider text-gray-500 uppercase">
-            Curated 25-Problem Roadmap
+            Curated 22-Problem Roadmap
           </div>
 
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 leading-tight">
@@ -64,7 +64,7 @@ export const LandingView: React.FC = () => {
         <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs font-semibold text-gray-600">
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-            25 Problems
+            22 Problems
           </span>
           <span className="text-gray-300">·</span>
           <span className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export const LandingView: React.FC = () => {
 
       {/* Minimal Footer */}
       <footer className="max-w-5xl mx-auto w-full text-center text-[11px] text-gray-400 py-4 font-mono">
-        DP Quest · Sequential Problem Tracker · 25 Curated Challenges
+        DP Quest · Sequential Problem Tracker · 22 Curated Challenges
       </footer>
     </div>
   );

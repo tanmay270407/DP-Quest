@@ -110,9 +110,9 @@ export default async function handler(req: any, res: any) {
       const completedCount = progressRows?.length || 0;
       const totalXp = progressRows ? progressRows.reduce((acc: number, r: any) => acc + (r.xp_earned || 0), 0) : 0;
 
-      if (completedCount < 25 || totalXp < 250) {
+      if (completedCount < 22 || totalXp < 220) {
         return sendJson(res, 403, {
-          error: `Certificate Locked. You have completed ${completedCount}/25 problems (${totalXp} XP). All 25 problems and 250 XP are required.`
+          error: `Certificate Locked. You have completed ${completedCount}/22 problems (${totalXp} XP). All 22 problems and 220 XP are required.`
         });
       }
 
@@ -132,8 +132,8 @@ export default async function handler(req: any, res: any) {
             certificateId: existingCert.certificate_id,
             userName: existingCert.user_name || profileName,
             completedAt: existingCert.completed_at,
-            totalProblems: 25,
-            totalXp: 250,
+            totalProblems: 22,
+            totalXp: 220,
             verificationUrl: existingCert.verification_url,
             downloadCount: existingCert.download_count || 0,
             firstDownloadedAt: existingCert.first_downloaded_at,
@@ -176,8 +176,8 @@ export default async function handler(req: any, res: any) {
           certificateId: certificateId,
           userName: profileName,
           completedAt: now,
-          totalProblems: 25,
-          totalXp: 250,
+          totalProblems: 22,
+          totalXp: 220,
           verificationUrl: verificationUrl,
           downloadCount: 0,
           firstDownloadedAt: null,

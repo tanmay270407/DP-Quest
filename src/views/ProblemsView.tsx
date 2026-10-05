@@ -67,7 +67,7 @@ export const ProblemsView: React.FC = () => {
             Problems
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            25 sequential dynamic programming challenges.
+            22 sequential dynamic programming challenges.
           </p>
         </div>
 

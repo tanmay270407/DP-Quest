@@ -20,7 +20,7 @@ export type VerificationState =
 
 export interface Problem {
   id: string;
-  number: number; // 1 to 25
+  number: number; // 1 to 22
   title: string;
   platform: Platform;
   problemNumber?: number | string;

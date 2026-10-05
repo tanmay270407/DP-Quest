@@ -79,7 +79,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoadingData(true);
 
     try {
-      // 1. Fetch 25 problems
+      // 1. Fetch 22 problems
       const loadedProblems = await supabaseService.getProblems();
       setProblems(loadedProblems);
 
@@ -100,8 +100,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             month: 'long',
             day: 'numeric'
           }),
-          totalProblems: 25,
-          totalXp: 250,
+          totalProblems: 22,
+          totalXp: 220,
           verificationUrl: dbCert.verification_url
         });
       } else {
@@ -123,7 +123,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     (p) => userProgress[p.id]?.status === 'COMPLETED'
   );
   const completedCount = completedProblems.length;
-  // Strict XP rule: exactly 10 XP per unique completed problem, max 250 XP
+  // Strict XP rule: exactly 10 XP per unique completed problem, max 220 XP
   const totalXp = completedCount * 10;
   const progressPercentage = Math.round((completedCount / problems.length) * 100);
   const isQuestComplete = completedCount === problems.length && problems.length > 0;

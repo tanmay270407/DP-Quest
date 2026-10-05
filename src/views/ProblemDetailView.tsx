@@ -345,7 +345,7 @@ export const ProblemDetailView: React.FC = () => {
                   </div>
                 ) : (
                   <div className="text-[11px] text-emerald-600 font-semibold pt-1">
-                    All 25 Problems Solved! Certificate Ready.
+                    All 22 Problems Solved! Certificate Ready.
                   </div>
                 )}
               </div>

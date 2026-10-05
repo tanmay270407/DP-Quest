@@ -42,7 +42,7 @@ export const ProgressView: React.FC = () => {
     );
   }
 
-  const percentage = Math.round((completedCount / 25) * 100);
+  const percentage = Math.round((completedCount / 22) * 100);
 
   // Compute recent attempts list
   const recentAttempts = problems
@@ -107,7 +107,7 @@ export const ProgressView: React.FC = () => {
               Problems Completed
             </div>
             <div className="text-2xl font-bold font-mono text-gray-900 mt-0.5">
-              {completedCount} <span className="text-sm font-sans text-gray-400">/ 25</span>
+              {completedCount} <span className="text-sm font-sans text-gray-400">/ 22</span>
             </div>
           </div>
 
@@ -133,13 +133,13 @@ export const ProgressView: React.FC = () => {
         {/* Progress Bar */}
         <NeumorphicProgressBar
           current={completedCount}
-          total={25}
+          total={22}
           showLabels={false}
           size="md"
         />
 
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{25 - completedCount} problems remaining</span>
+          <span>{22 - completedCount} problems remaining</span>
           {isQuestComplete ? (
             <button
               onClick={() => navigateTo('certificate')}

@@ -214,15 +214,15 @@ export const CertificateDesign: React.FC<CertificateDesignProps> = ({
           </p>
         </div>
 
-        {/* Underlined Milestone: 25 / 25 Problems & 250 XP */}
+        {/* Underlined Milestone: 22 / 22 Problems & 220 XP */}
         <div className="space-y-1 sm:space-y-1.5 my-1">
           <div className="text-xs sm:text-base md:text-lg font-sans font-bold text-[#0F1D32] tracking-wide">
-            25 / 25 Problems Completed
+            22 / 22 Problems Completed
           </div>
           {/* Gold Underline Divider */}
           <div className="w-36 sm:w-56 h-[1.5px] bg-[#C5A869] mx-auto" />
           <div className="text-[11px] sm:text-sm md:text-base font-sans font-semibold text-[#0F1D32]">
-            250 XP Earned
+            220 XP Earned
           </div>
         </div>
 

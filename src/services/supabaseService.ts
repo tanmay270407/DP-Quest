@@ -291,43 +291,7 @@ class SupabaseService {
   // 2. PROBLEMS
   // ========================================================
   async getProblems(): Promise<Problem[]> {
-    if (!isSupabaseConfigured() || this.schemaMissing) {
-      return PROBLEMS_DATA;
-    }
-
-    try {
-      const { data: dbProblems, error } = await supabase
-        .from('problems')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (error) {
-        if (this.isTableMissingError(error)) {
-          this.setSchemaMissing(true);
-        }
-        return PROBLEMS_DATA;
-      }
-
-      if (!dbProblems || dbProblems.length === 0) {
-        await this.seedProblemsIfEmpty();
-        return PROBLEMS_DATA;
-      }
-
-      return dbProblems.map((p: DbProblem) => ({
-        id: p.id,
-        number: p.problem_number,
-        title: p.title,
-        platform: p.platform as any,
-        problemNumber: p.problem_number_external ? parseInt(p.problem_number_external, 10) : undefined,
-        url: p.url,
-        xp: p.xp,
-        order: p.display_order,
-        category: p.category as any,
-        hintSnippet: p.hint_snippet || undefined
-      }));
-    } catch (e) {
-      return PROBLEMS_DATA;
-    }
+    return PROBLEMS_DATA;
   }
 
   async seedProblemsIfEmpty() {
@@ -343,7 +307,7 @@ class SupabaseService {
         return;
       }
 
-      if (count && count >= 25) return;
+      if (count && count >= 22) return;
 
       const records = PROBLEMS_DATA.map((p) => ({
         problem_number: p.number,

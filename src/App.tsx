@@ -212,7 +212,7 @@ const AppContent: React.FC = () => {
                 {totalXp} XP
               </div>
               <div className="neu-inset-sm px-2.5 py-1 rounded-lg text-xs font-mono text-gray-600">
-                {completedCount}/25
+                {completedCount}/22
               </div>
             </div>
           </header>

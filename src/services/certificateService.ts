@@ -15,7 +15,7 @@ export interface VerifyCertificateResult {
 
 class CertificateService {
   /**
-   * Request server-side certificate generation (strict 25/25 and 250 XP required)
+   * Request server-side certificate generation (strict 22/22 and 220 XP required)
    */
   async generateCertificate(
     userId: string,
@@ -75,8 +75,8 @@ class CertificateService {
             month: 'long',
             day: 'numeric'
           }),
-          totalProblems: cert.totalProblems || 25,
-          totalXp: cert.totalXp || 250,
+          totalProblems: cert.totalProblems || 22,
+          totalXp: cert.totalXp || 220,
           verificationUrl: cert.verificationUrl
         }
       };
@@ -129,8 +129,8 @@ class CertificateService {
           month: 'long',
           day: 'numeric'
         }),
-        totalProblems: data.totalProblems || 25,
-        totalXp: data.totalXp || 250,
+        totalProblems: data.totalProblems || 22,
+        totalXp: data.totalXp || 220,
         verificationUrl: data.verificationUrl
       };
     } catch (err: any) {
@@ -185,8 +185,8 @@ class CertificateService {
           userId: certificate.userId,
           userName: certificate.userName,
           completedAt: certificate.completedAt,
-          totalProblems: certificate.totalProblems || 25,
-          totalXp: certificate.totalXp || 250,
+          totalProblems: certificate.totalProblems || 22,
+          totalXp: certificate.totalXp || 220,
           verificationUrl: certificate.verificationUrl,
           downloadedAt: new Date().toISOString()
         })
@@ -293,11 +293,11 @@ class CertificateService {
       doc.setTextColor(15, 29, 50);
       doc.text('Dynamic Programming Quest', width / 2, 98, { align: 'center' });
 
-      // 10. Milestone Underline Box: 25 / 25 Problems Completed & 250 XP
+      // 10. Milestone Underline Box: 22 / 22 Problems Completed & 220 XP
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.setTextColor(15, 29, 50);
-      doc.text('25 / 25 Problems Completed', width / 2, 112, { align: 'center' });
+      doc.text('22 / 22 Problems Completed', width / 2, 112, { align: 'center' });
 
       // Gold divider line under milestone
       doc.setDrawColor(197, 168, 105);
@@ -306,7 +306,7 @@ class CertificateService {
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.text('250 XP Earned', width / 2, 124, { align: 'center' });
+      doc.text('220 XP Earned', width / 2, 124, { align: 'center' });
 
       // 11. Bottom Left: Completion Date
       doc.setFont('helvetica', 'normal');

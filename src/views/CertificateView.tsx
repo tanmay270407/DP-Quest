@@ -106,7 +106,7 @@ export const CertificateView: React.FC = () => {
   // ========================================================
   // STATE 1: BEFORE COMPLETION (LOCKED)
   // ========================================================
-  if (!isQuestComplete || completedCount < 25) {
+  if (!isQuestComplete || completedCount < 22) {
     return (
       <div className="max-w-2xl mx-auto space-y-8 pb-16">
         <div>
@@ -114,7 +114,7 @@ export const CertificateView: React.FC = () => {
             Certificate
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Earn your accredited credential upon solving all 25 dynamic programming challenges.
+            Earn your accredited credential upon solving all 22 dynamic programming challenges.
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export const CertificateView: React.FC = () => {
               Certificate Locked
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 max-w-sm mx-auto">
-              Complete all 25 problems to unlock your certificate.
+              Complete all 22 problems to unlock your certificate.
             </p>
           </div>
 
@@ -138,10 +138,10 @@ export const CertificateView: React.FC = () => {
               Current Progress
             </div>
             <div className="text-2xl font-mono font-bold text-gray-800">
-              {completedCount} <span className="text-sm font-sans text-gray-400">/ 25 Completed</span>
+              {completedCount} <span className="text-sm font-sans text-gray-400">/ 22 Completed</span>
             </div>
             <div className="text-xs text-gray-500">
-              {25 - completedCount} problem{25 - completedCount === 1 ? '' : 's'} remaining ({totalXp} / 250 XP)
+              {22 - completedCount} problem{22 - completedCount === 1 ? '' : 's'} remaining ({totalXp} / 220 XP)
             </div>
           </div>
 
@@ -161,7 +161,7 @@ export const CertificateView: React.FC = () => {
   }
 
   // ========================================================
-  // STATE 2: 25/25 COMPLETED BUT NOT YET GENERATED
+  // STATE 2: 22/22 COMPLETED BUT NOT YET GENERATED
   // ========================================================
   if (!certificate) {
     return (
@@ -171,7 +171,7 @@ export const CertificateView: React.FC = () => {
             Certificate
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Congratulations on finishing all 25 problems!
+            Congratulations on finishing all 22 problems!
           </p>
         </div>
 
@@ -185,7 +185,7 @@ export const CertificateView: React.FC = () => {
               Certificate Unlocked ✓
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-              25 / 25 Problems · 250 XP Earned
+              22 / 22 Problems · 220 XP Earned
             </h2>
             <p className="text-xs text-gray-500 max-w-md mx-auto">
               Your Dynamic Programming mastery is complete and verified. Click below to generate your official certificate with a cryptographically verifiable ID and QR code.
@@ -232,7 +232,7 @@ export const CertificateView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            Verified credential for {certificate.userName} · 25 / 25 Completed (250 XP)
+            Verified credential for {certificate.userName} · 22 / 22 Completed (220 XP)
           </p>
         </div>
 

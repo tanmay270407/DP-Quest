@@ -17,22 +17,12 @@ export const ProfileView: React.FC = () => {
     totalXp, 
     completedCount, 
     isQuestComplete, 
-    navigateTo,
-    resetProgress
+    navigateTo 
   } = useQuest();
 
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(user?.fullName || '');
   const [isSaving, setIsSaving] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-  const handleResetProgress = async () => {
-    setIsResetting(true);
-    await resetProgress();
-    setIsResetting(false);
-    setShowResetConfirm(false);
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,55 +168,6 @@ export const ProfileView: React.FC = () => {
         </div>
       </NeumorphicCard>
 
-      {/* Rollback / Reset Progress Card */}
-      <NeumorphicCard variant="raised" className="p-6 space-y-4">
-        <div>
-          <h3 className="text-sm font-bold text-gray-900">
-            Rollback / Reset Quest Progress
-          </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Reset all problem completion statuses back to Problem #1 and start the quest fresh.
-          </p>
-        </div>
-
-        {!showResetConfirm ? (
-          <NeumorphicButton
-            size="sm"
-            variant="secondary"
-            onClick={() => setShowResetConfirm(true)}
-            className="text-red-600 hover:text-red-700 font-semibold text-xs"
-          >
-            Rollback Progress
-          </NeumorphicButton>
-        ) : (
-          <div className="p-4 rounded-xl neu-inset bg-rose-50/50 space-y-3">
-            <p className="text-xs font-medium text-rose-800">
-              Are you sure you want to rollback and reset your quest progress? All completed problems will be locked except Problem #1.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <NeumorphicButton
-                size="sm"
-                variant="primary"
-                onClick={handleResetProgress}
-                disabled={isResetting}
-                className="bg-rose-600 text-white hover:bg-rose-700 text-xs font-semibold"
-              >
-                {isResetting ? 'Resetting...' : 'Yes, Rollback Progress'}
-              </NeumorphicButton>
-
-              <NeumorphicButton
-                size="sm"
-                variant="secondary"
-                onClick={() => setShowResetConfirm(false)}
-                disabled={isResetting}
-                className="text-xs"
-              >
-                Cancel
-              </NeumorphicButton>
-            </div>
-          </div>
-        )}
-      </NeumorphicCard>
     </div>
   );
 };

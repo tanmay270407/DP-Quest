@@ -215,14 +215,14 @@ CREATE POLICY "Users can read own certificate downloads" ON public.certificate_d
   FOR SELECT USING (auth.uid() = user_id OR auth.role() = 'anon');
 
 -- ========================================================
--- SEED DATA: 25 DYNAMIC PROGRAMMING PROBLEMS
+-- SEED DATA: 22 DYNAMIC PROGRAMMING PROBLEMS
 -- ========================================================
 
 INSERT INTO public.problems (problem_number, title, platform, problem_number_external, url, xp, display_order, category, hint_snippet)
 VALUES
   (1, 'Fibonacci Number', 'LeetCode', '509', 'https://leetcode.com/problems/fibonacci-number/', 10, 1, 'Basic DP', 'F(n) = F(n-1) + F(n-2) with base cases F(0)=0, F(1)=1.'),
   (2, 'Climbing Stairs', 'LeetCode', '70', 'https://leetcode.com/problems/climbing-stairs/', 10, 2, 'Basic DP', 'Each time you can climb 1 or 2 steps. How many distinct ways can you reach step n?'),
-  (3, 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/count-ways-to-reach-the-nth-stair-1587115620/1', 10, 3, '1D DP', 'Tribonacci state transition: ways(n) = ways(n-1) + ways(n-2) + ways(n-3).'),
+  (3, 'Count Ways with 3 Moves', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/count-number-of-hops-1587115620/1', 10, 3, '1D DP', 'Tribonacci state transition: ways(n) = ways(n-1) + ways(n-2) + ways(n-3).'),
   (4, 'Frog Jump', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/geek-jump/1', 10, 4, '1D DP', 'Minimize energy cost: jump either to i+1 or i+2 stone with energy difference |height[i]-height[j]|.'),
   (5, 'Min Cost Climbing Stairs', 'LeetCode', '746', 'https://leetcode.com/problems/min-cost-climbing-stairs/', 10, 5, '1D DP', 'Pay cost[i] to take 1 or 2 steps. Find the minimum cost to reach the top.'),
   (6, 'House Robber', 'LeetCode', '198', 'https://leetcode.com/problems/house-robber/', 10, 6, '1D DP', 'Maximize loot without alerting adjacent security systems: dp[i] = max(dp[i-1], dp[i-2] + nums[i]).'),
@@ -231,20 +231,17 @@ VALUES
   (9, 'Jump Game', 'LeetCode', '55', 'https://leetcode.com/problems/jump-game/', 10, 9, 'Optimization', 'Maintain the maximum reachable index or use reachability dynamic programming.'),
   (10, 'Jump Game II', 'LeetCode', '45', 'https://leetcode.com/problems/jump-game-ii/', 10, 10, 'Optimization', 'Find minimum jumps needed to reach the last index.'),
   (11, 'Ways to Tile a Floor', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/ways-to-tile-a-floor5836/1', 10, 11, 'Counting DP', 'Count distinct ways to tile a 2 x n floor using 2 x 1 tiles (Fibonacci relation).'),
-  (12, 'Count Derangements', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/count-derangements/0', 10, 12, 'Counting DP', 'Permutations where no element appears in original spot: D(n) = (n - 1) * (D(n - 1) + D(n - 2)).'),
+  (12, 'Count Derangements', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/dearrangement-of-balls0918/1', 10, 12, 'Counting DP', 'Permutations where no element appears in original spot: D(n) = (n - 1) * (D(n - 1) + D(n - 2)).'),
   (13, 'Maximum Subarray', 'LeetCode', '53', 'https://leetcode.com/problems/maximum-subarray/', 10, 13, 'Optimization', 'Kadane''s algorithm: dp[i] = max(nums[i], dp[i-1] + nums[i]).'),
   (14, 'Decode Ways', 'LeetCode', '91', 'https://leetcode.com/problems/decode-ways/', 10, 14, 'Counting DP', 'Partitioning digits into valid character codes 1..26 with zero check.'),
   (15, 'Padovan Sequence', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/padovan-sequence2855/1', 10, 15, 'Basic DP', 'P(n) = P(n-2) + P(n-3) with initial terms P(0)=P(1)=P(2)=1.'),
-  (16, 'Lucas Number', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/lucas-number3407/1', 10, 16, 'Basic DP', 'L(n) = L(n-1) + L(n-2) with seed values L(0)=2, L(1)=1.'),
+  (16, 'Lucas Number', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/lucas-number4515/1', 10, 16, 'Basic DP', 'L(n) = L(n-1) + L(n-2) with seed values L(0)=2, L(1)=1.'),
   (17, 'Consecutive 1''s Not Allowed', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/consecutive-1s-not-allowed1912/1', 10, 17, 'Counting DP', 'Binary strings of length n without adjacent 1s (Fibonacci based recurrence).'),
-  (18, 'Dice Combinations', 'CSES', '1633', 'https://cses.fi/problemset/task/1633', 10, 18, 'Counting DP', 'Ways to construct sum n by throwing a die one or more times modulo 10^9+7.'),
-  (19, 'Ways to Express N as Sum of 1, 3, 4', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/count-ways-to-express-n-as-the-sum-of-1-3-and-4/0', 10, 19, 'Counting DP', 'dp[i] = dp[i-1] + dp[i-3] + dp[i-4] with proper base boundary checks.'),
-  (20, 'Minimize Steps to Reach K from 0', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/minimum-number-of-jumps-1587115620/1', 10, 20, 'Optimization', 'Find minimum step movements or coordinate transitions to target position.'),
-  (21, 'Minimum Operations to Obtain N', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/find-optimum-operation4504/1', 10, 21, 'Optimization', 'Minimum operations to convert 0 to N using either add 1 or multiply by 2.'),
-  (22, 'Removing Digits', 'CSES', '1637', 'https://cses.fi/problemset/task/1637', 10, 22, 'Advanced', 'In each step, subtract one of the digits from n. Find minimum steps to reach 0.'),
-  (23, 'Maximize The Cut Segments', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/cutted-segments1642/1', 10, 23, 'Advanced', 'Cut line segment of length n into maximum pieces of length x, y, or z (unbounded knapsack).'),
-  (24, 'Geek and its Game of Coins', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/geek-and-its-game-of-coins4043/1', 10, 24, 'Advanced', 'Game theory DP: winning and losing states with moves {1, X, Y}.'),
-  (25, 'Chicks in a Zoo', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/chicks-in-a-zoo1109/1', 10, 25, 'Advanced', 'Chick population reproduction with 6-day expiration cycle.')
+  (18, 'Ways to Express N as Sum of 1, 3, 4', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/count-ways-to-express-n-as-the-sum-of-13-and-44024/1', 10, 18, 'Counting DP', 'dp[i] = dp[i-1] + dp[i-3] + dp[i-4] with proper base boundary checks.'),
+  (19, 'Minimum Operations to Obtain N', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/find-optimum-operation4504/1', 10, 19, 'Optimization', 'Start at 1: operations are *2, *3 or +1. Find minimum operations to obtain N (or reduce N to 1).'),
+  (20, 'Maximize The Cut Segments', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/cutted-segments1642/1', 10, 20, 'Advanced', 'Cut line segment of length n into maximum pieces of length x, y, or z (unbounded knapsack).'),
+  (21, 'Geek and its Game of Coins', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/geek-and-its-game-of-coins4043/1', 10, 21, 'Advanced', 'Game theory DP: winning and losing states with moves {1, X, Y}.'),
+  (22, 'Chicks in a Zoo', 'GFG', NULL, 'https://www.geeksforgeeks.org/problems/chicks-in-a-zoo1159/1', 10, 22, 'Advanced', 'Chick population reproduction with 6-day expiration cycle.')
 ON CONFLICT (display_order) DO UPDATE
 SET 
   title = EXCLUDED.title,

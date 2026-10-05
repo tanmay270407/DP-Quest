@@ -38,10 +38,10 @@ export const PROBLEMS_DATA: Problem[] = [
   {
     id: 'dp-03',
     number: 3,
-    title: 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
-    canonicalTitle: 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
+    title: 'Count Ways with 3 Moves',
+    canonicalTitle: 'Count Ways with 3 Moves',
     platform: 'GFG',
-    url: 'https://www.geeksforgeeks.org/dsa/count-ways-reach-nth-stair-using-step-1-2-3/',
+    url: 'https://www.geeksforgeeks.org/problems/count-number-of-hops-1587115620/1',
     xp: 10,
     category: '1D DP',
     order: 3,
@@ -52,7 +52,13 @@ export const PROBLEMS_DATA: Problem[] = [
       'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
       'Count ways to reach the n’th stair using step 1, 2 or 3',
       'Count ways to reach the nth stair using step 1, 2 or 3',
-      'Count Ways to Reach Nth Stair Using 1 2 3 Steps'
+      'Count Ways to Reach Nth Stair Using 1 2 3 Steps',
+      'Count Ways with 3 Moves',
+      'Count Ways with 3 Moves - GeeksforGeeks',
+      'Count number of hops',
+      'Count Number of Hops',
+      'Count number of hops - GeeksforGeeks',
+      'Count Number of Hops - GeeksforGeeks'
     ],
     rejectionSignatures: [
       'Ways to Reach the n’th Stair (1 or 2 steps only)',
@@ -315,7 +321,7 @@ export const PROBLEMS_DATA: Problem[] = [
       'Count ways to express N as the sum of 1, 3 and 4',
       'Ways to write n as sum of 1, 3 and 4'
     ],
-    rejectionSignatures: ['Count Ways to Reach Nth Stair', 'Dice Combinations']
+    rejectionSignatures: ['Count Ways to Reach Nth Stair']
   },
   {
     id: 'dp-19',
@@ -336,10 +342,7 @@ export const PROBLEMS_DATA: Problem[] = [
       'Minimum steps to reach 1',
       'Minimum Operations to reach N from 1'
     ],
-    rejectionSignatures: [
-      'Minimize Steps to Reach K from 0 (start 0 with +1, *2)',
-      'Minimum Operations (start 0)'
-    ]
+    rejectionSignatures: ['Minimum Operations (start 0)']
   },
   {
     id: 'dp-20',

@@ -291,13 +291,77 @@ class SupabaseService {
   // 2. PROBLEMS
   // ========================================================
   async getProblems(): Promise<Problem[]> {
-    return PROBLEMS_DATA;
+    if (!isSupabaseConfigured() || this.schemaMissing) {
+      return PROBLEMS_DATA;
+    }
+
+    try {
+      // 1. Delete any stale problem records > PROBLEMS_DATA.length (e.g. old 23, 24, 25)
+      await supabase
+        .from('problems')
+        .delete()
+        .gt('problem_number', PROBLEMS_DATA.length);
+
+      await supabase
+        .from('problems')
+        .delete()
+        .gt('display_order', PROBLEMS_DATA.length);
+
+      // 2. Reseed / Sync PROBLEMS_DATA so problem_number 1..22 are up to date
+      await this.seedProblemsIfEmpty(true);
+
+      const { data: dbProblems, error } = await supabase
+        .from('problems')
+        .select('*')
+        .lte('problem_number', PROBLEMS_DATA.length)
+        .order('display_order', { ascending: true });
+
+      if (error || !dbProblems || dbProblems.length === 0) {
+        return PROBLEMS_DATA;
+      }
+
+      // Map and deduplicate by problem_number (max PROBLEMS_DATA.length)
+      const problemMap = new Map<number, Problem>();
+      
+      PROBLEMS_DATA.forEach((p) => {
+        problemMap.set(p.number, p);
+      });
+
+      dbProblems.forEach((p: DbProblem) => {
+        if (p.problem_number <= PROBLEMS_DATA.length) {
+          const codeProblem = PROBLEMS_DATA.find((cp) => cp.number === p.problem_number);
+          if (codeProblem) {
+            problemMap.set(p.problem_number, {
+              id: p.id,
+              number: p.problem_number,
+              title: codeProblem.title,
+              platform: codeProblem.platform,
+              problemNumber: codeProblem.problemNumber,
+              url: codeProblem.url,
+              xp: p.xp || 10,
+              order: p.display_order || p.problem_number,
+              category: codeProblem.category,
+              hintSnippet: codeProblem.hintSnippet
+            });
+          }
+        }
+      });
+
+      return Array.from(problemMap.values()).sort((a, b) => a.number - b.number);
+    } catch (e) {
+      return PROBLEMS_DATA;
+    }
   }
 
-  async seedProblemsIfEmpty() {
+  async seedProblemsIfEmpty(forceUpdate = false) {
     if (!isSupabaseConfigured() || this.schemaMissing) return;
 
     try {
+      await supabase
+        .from('problems')
+        .delete()
+        .gt('problem_number', PROBLEMS_DATA.length);
+
       const { count, error } = await supabase
         .from('problems')
         .select('*', { count: 'exact', head: true });
@@ -307,7 +371,7 @@ class SupabaseService {
         return;
       }
 
-      if (count && count >= 22) return;
+      if (!forceUpdate && count && count === PROBLEMS_DATA.length) return;
 
       const records = PROBLEMS_DATA.map((p) => ({
         problem_number: p.number,

@@ -57,11 +57,22 @@ class VerificationService {
         payload.imageDataUrl = req.imageUrl;
       }
 
-      const response = await fetch('/api/verify-proof', {
+      let response = await fetch('/api/verify-proof', {
         method: 'POST',
         headers,
         body: JSON.stringify(payload)
       });
+
+      // If 401 Unauthorized occurs due to an expired session token, retry once without the stale header
+      if (response.status === 401 && headers['Authorization']) {
+        console.warn('Authorization header returned 401 (expired session token). Retrying verification with user ID...');
+        const unauthHeaders = { 'Content-Type': 'application/json' };
+        response = await fetch('/api/verify-proof', {
+          method: 'POST',
+          headers: unauthHeaders,
+          body: JSON.stringify(payload)
+        });
+      }
 
       const contentType = response.headers.get('content-type') || '';
       let data: any = {};

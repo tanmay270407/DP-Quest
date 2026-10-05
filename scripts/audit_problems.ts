@@ -72,7 +72,7 @@ export function auditAllProblems(): ProblemAuditResult[] {
 // Run if called directly
 const results = auditAllProblems();
 console.log('========================================================================');
-console.log('           DP QUEST AUTHORITATIVE 25-PROBLEM AUDIT REPORT               ');
+console.log('           DP QUEST AUTHORITATIVE 22-PROBLEM AUDIT REPORT               ');
 console.log('========================================================================');
 
 let allValid = true;
@@ -89,6 +89,6 @@ results.forEach((r) => {
 });
 
 console.log('========================================================================');
-console.log(`TOTAL PROBLEMS AUDITED: ${results.length}/25`);
-console.log(`ALL 25 PROBLEMS FULLY VALID: ${allValid ? 'YES (100% VALIDATED)' : 'NO'}`);
+console.log(`TOTAL PROBLEMS AUDITED: ${results.length}/22`);
+console.log(`ALL 22 PROBLEMS FULLY VALID: ${allValid ? 'YES (100% VALIDATED)' : 'NO'}`);
 console.log('========================================================================');

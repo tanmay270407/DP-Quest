@@ -76,8 +76,8 @@ const PROBLEMS_METADATA: Record<string, {
   'dp-3': {
     id: 'dp-03',
     number: 3,
-    title: 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
-    canonicalTitle: 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
+    title: 'Count Ways with 3 Moves',
+    canonicalTitle: 'Count Ways with 3 Moves',
     platform: 'GFG',
     xp: 10,
     category: '1D DP',
@@ -87,7 +87,13 @@ const PROBLEMS_METADATA: Record<string, {
       'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
       'Count ways to reach the n’th stair using step 1, 2 or 3',
       'Count ways to reach the nth stair using step 1, 2 or 3',
-      'Count Ways to Reach Nth Stair Using 1 2 3 Steps'
+      'Count Ways to Reach Nth Stair Using 1 2 3 Steps',
+      'Count Ways with 3 Moves',
+      'Count Ways with 3 Moves - GeeksforGeeks',
+      'Count number of hops',
+      'Count Number of Hops',
+      'Count number of hops - GeeksforGeeks',
+      'Count Number of Hops - GeeksforGeeks'
     ],
     rejectionSignatures: [
       'Ways to Reach the n’th Stair (1 or 2 steps only)',
@@ -99,8 +105,8 @@ const PROBLEMS_METADATA: Record<string, {
   'dp-03': {
     id: 'dp-03',
     number: 3,
-    title: 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
-    canonicalTitle: 'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
+    title: 'Count Ways with 3 Moves',
+    canonicalTitle: 'Count Ways with 3 Moves',
     platform: 'GFG',
     xp: 10,
     category: '1D DP',
@@ -110,7 +116,13 @@ const PROBLEMS_METADATA: Record<string, {
       'Count Ways to Reach Nth Stair Using 1, 2, 3 Steps',
       'Count ways to reach the n’th stair using step 1, 2 or 3',
       'Count ways to reach the nth stair using step 1, 2 or 3',
-      'Count Ways to Reach Nth Stair Using 1 2 3 Steps'
+      'Count Ways to Reach Nth Stair Using 1 2 3 Steps',
+      'Count Ways with 3 Moves',
+      'Count Ways with 3 Moves - GeeksforGeeks',
+      'Count number of hops',
+      'Count Number of Hops',
+      'Count number of hops - GeeksforGeeks',
+      'Count Number of Hops - GeeksforGeeks'
     ],
     rejectionSignatures: [
       'Ways to Reach the n’th Stair (1 or 2 steps only)',

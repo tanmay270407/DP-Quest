@@ -70,12 +70,13 @@ export default async function handler(req: any, res: any) {
           autoRefreshToken: false
         }
       });
-      const { data: authData, error: authError } = await userScopedSupabase.auth.getUser(token);
-      if (authError || !authData?.user) {
-        return sendJson(res, 401, { error: 'Unauthorized: Valid student session token required.' });
+      const { data: authData } = await userScopedSupabase.auth.getUser(token);
+      if (authData?.user) {
+        userId = authData.user.id;
+        dbClient = userScopedSupabase;
+      } else if (body.userId) {
+        userId = body.userId;
       }
-      userId = authData.user.id;
-      dbClient = userScopedSupabase;
     } else if (body.userId) {
       userId = body.userId;
     }

@@ -594,7 +594,7 @@ export default async function handler(req: any, res: any) {
     try { body = JSON.parse(body); } catch { body = {}; }
   }
 
-  const { problemId, imageDataUrl } = body;
+  const { problemId, imageDataUrl, storagePath } = body;
   const authHeader = req.headers?.authorization;
 
   // 3. Supabase Auth Token Extraction
@@ -733,29 +733,53 @@ export default async function handler(req: any, res: any) {
     }
 
     // 7. Validate Image
-    if (!imageDataUrl || typeof imageDataUrl !== 'string') {
+    let imageBase64: string | null = null;
+    let mimeType = 'image/png';
+
+    // Prioritize fetching from Supabase Storage if storagePath is available
+    if (storagePath && supabase) {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('submission-proofs')
+        .download(storagePath);
+
+      if (!downloadError && fileData) {
+        mimeType = fileData.type || 'image/png';
+        const arrayBuffer = await fileData.arrayBuffer();
+        imageBase64 = Buffer.from(arrayBuffer).toString('base64');
+      } else if (downloadError) {
+        console.warn('[PROOF_VERIFY] Storage download notice:', downloadError.message);
+      }
+    }
+
+    // Fallback to inline imageDataUrl
+    if (!imageBase64 && imageDataUrl && typeof imageDataUrl === 'string' && imageDataUrl.startsWith('data:')) {
+      const base64Match = imageDataUrl.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+      if (base64Match) {
+        mimeType = base64Match[1];
+        imageBase64 = base64Match[2];
+      } else {
+        const commaIdx = imageDataUrl.indexOf(',');
+        if (commaIdx !== -1) {
+          const header = imageDataUrl.substring(0, commaIdx);
+          const rawContent = imageDataUrl.substring(commaIdx + 1);
+          const typeMatch = header.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+)/);
+          mimeType = typeMatch ? typeMatch[1] : 'image/png';
+          imageBase64 = Buffer.from(decodeURIComponent(rawContent), 'utf-8').toString('base64');
+        }
+      }
+    }
+
+    if (!imageBase64) {
       return sendJson(res, 400, {
         success: false,
         status: 'REJECTED',
-        reason: 'Image proof data is missing or invalid.',
-        error: 'Missing imageDataUrl'
+        reason: 'Image proof data is missing, invalid, or could not be downloaded.',
+        error: 'Missing image data'
       });
     }
 
-    const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return sendJson(res, 400, {
-        success: false,
-        status: 'REJECTED',
-        reason: 'Invalid image format. Expected a base64 Data URL (e.g. data:image/png;base64,...).',
-        error: 'INVALID_IMAGE_FORMAT'
-      });
-    }
-
-    const mimeType = matches[1].toLowerCase();
-    const base64Data = matches[2];
     const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!allowedMimeTypes.includes(mimeType)) {
+    if (!allowedMimeTypes.includes(mimeType.toLowerCase())) {
       return sendJson(res, 400, {
         success: false,
         status: 'REJECTED',
@@ -764,7 +788,18 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const imageBuffer = Buffer.from(base64Data, 'base64');
+    let imageBuffer: Buffer;
+    try {
+      imageBuffer = Buffer.from(imageBase64, 'base64');
+    } catch {
+      return sendJson(res, 400, {
+        success: false,
+        status: 'REJECTED',
+        reason: 'Invalid base64 encoding for image data.',
+        error: 'INVALID_BASE64'
+      });
+    }
+
     const MAX_BYTES = 5 * 1024 * 1024; // Strict 5 MB Limit
     if (imageBuffer.length > MAX_BYTES) {
       return sendJson(res, 400, {
@@ -855,7 +890,7 @@ Respond strictly in JSON according to the schema provided.`;
                 {
                   inlineData: {
                     mimeType: mimeType,
-                    data: base64Data
+                    data: imageBase64
                   }
                 }
               ]

@@ -15,6 +15,7 @@ export interface DbProfile {
   email: string;
   password?: string | null;
   total_xp: number;
+  completed_count: number;
   current_streak: number;
   created_at?: string;
 }
@@ -123,6 +124,7 @@ class SupabaseService {
       full_name: fullName,
       email: email,
       total_xp: 0,
+      completed_count: 0,
       current_streak: 1
     };
     try {
@@ -255,6 +257,7 @@ class SupabaseService {
         email: email,
         password: password || null,
         total_xp: 0,
+        completed_count: 0,
         current_streak: 1
       };
 
@@ -279,10 +282,35 @@ class SupabaseService {
     }
   }
 
+  async updateProfileStats(userId: string, completedCount: number): Promise<void> {
+    const totalXp = completedCount * 10;
+    if (!isSupabaseConfigured() || this.schemaMissing) {
+      const p = this.getLocalProfile(userId, '', '');
+      p.total_xp = totalXp;
+      p.completed_count = completedCount;
+      try {
+        localStorage.setItem(`dpquest_profile_${userId}`, JSON.stringify(p));
+      } catch {}
+      return;
+    }
+
+    try {
+      await supabase
+        .from('profiles')
+        .update({
+          total_xp: totalXp,
+          completed_count: completedCount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+    } catch {}
+  }
+
   async updateProfileXp(userId: string, xpIncrement: number): Promise<number> {
     if (!isSupabaseConfigured() || this.schemaMissing) {
       const p = this.getLocalProfile(userId, '', '');
       p.total_xp += xpIncrement;
+      p.completed_count = Math.floor(p.total_xp / 10);
       try {
         localStorage.setItem(`dpquest_profile_${userId}`, JSON.stringify(p));
       } catch {}
@@ -292,10 +320,15 @@ class SupabaseService {
     try {
       const profile = await this.getProfile(userId);
       const newTotal = (profile?.total_xp || 0) + xpIncrement;
+      const completedCount = Math.floor(newTotal / 10);
 
       await supabase
         .from('profiles')
-        .update({ total_xp: newTotal, updated_at: new Date().toISOString() })
+        .update({ 
+          total_xp: newTotal, 
+          completed_count: completedCount,
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', userId);
 
       return newTotal;
@@ -536,6 +569,9 @@ class SupabaseService {
       const reconciledMap = this.reconcileSequentialProgress(userId, rawMap, sortedProblems);
       this.syncProgressToSupabase(userId, reconciledMap, existing || []);
 
+      const completedCount = Object.values(reconciledMap).filter((p) => p.status === 'COMPLETED').length;
+      await this.updateProfileStats(userId, completedCount);
+
       return reconciledMap;
     } catch (e) {
       return this.reconcileSequentialProgress(userId, this.getLocalProgress(userId, sortedProblems), sortedProblems);
@@ -572,6 +608,9 @@ class SupabaseService {
 
     const reconciled = this.reconcileSequentialProgress(userId, updatedProgress, sortedProblems);
     this.saveLocalProgress(userId, reconciled);
+
+    const completedCount = Object.values(reconciled).filter((p) => p.status === 'COMPLETED').length;
+    await this.updateProfileStats(userId, completedCount);
 
     if (!isSupabaseConfigured() || this.schemaMissing) {
       return { success: true, nextProblemId };

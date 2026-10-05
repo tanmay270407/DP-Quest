@@ -359,7 +359,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         await supabase
           .from('profiles')
-          .update({ total_xp: 0, updated_at: new Date().toISOString() })
+          .update({ total_xp: 0, completed_count: 0, updated_at: new Date().toISOString() })
           .eq('id', user.id);
       } catch (e) {
         console.error('Reset error:', e);

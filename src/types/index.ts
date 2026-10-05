@@ -95,6 +95,7 @@ export interface DbProfile {
   email: string | null;
   password?: string | null;
   total_xp: number;
+  completed_count: number;
   current_streak: number;
   created_at?: string;
   updated_at?: string;

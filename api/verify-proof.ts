@@ -564,6 +564,22 @@ function sendJson(res: any, statusCode: number, data: any) {
   return res.end(JSON.stringify(data));
 }
 
+function detectMimeType(buffer: Buffer, defaultMime?: string): string {
+  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    return 'image/png';
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    return 'image/jpeg';
+  }
+  if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+    return 'image/webp';
+  }
+  if (defaultMime && ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(defaultMime.toLowerCase())) {
+    return defaultMime.toLowerCase() === 'image/jpg' ? 'image/jpeg' : defaultMime.toLowerCase();
+  }
+  return 'image/png';
+}
+
 export default async function handler(req: any, res: any) {
   // 1. CORS Preflight & Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -594,10 +610,16 @@ export default async function handler(req: any, res: any) {
     try { body = JSON.parse(body); } catch { body = {}; }
   }
 
-  const { problemId, imageDataUrl, storagePath } = body;
+  const {
+    problemId,
+    imageDataUrl,
+    storagePath,
+    submissionProofId
+  } = body;
+
   const authHeader = req.headers?.authorization;
 
-  // 3. Supabase Auth Token Extraction
+  // 3. Supabase Auth Token Extraction & User Authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return sendJson(res, 401, {
       success: false,
@@ -647,8 +669,47 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  // 4. Validate Problem
-  const problem = findProblem(problemId);
+  // 4. Resolve Problem (Supports UUID, 'dp-14', or '14')
+  let problem = findProblem(problemId);
+  let dbProblemUuid: string | null = null;
+
+  if (supabase) {
+    // If not found in static metadata (e.g. problemId is a Supabase UUID)
+    if (!problem && problemId) {
+      try {
+        const { data: dbProblem } = await supabase
+          .from('problems')
+          .select('id, problem_number, title, platform, problem_number_external')
+          .eq('id', problemId)
+          .maybeSingle();
+
+        if (dbProblem?.problem_number) {
+          problem = findProblem(String(dbProblem.problem_number)) || findProblem(`dp-${String(dbProblem.problem_number).padStart(2, '0')}`);
+          dbProblemUuid = dbProblem.id;
+        }
+      } catch (err) {
+        console.warn('[VERIFY_PROOF] DB UUID problem lookup notice:', err);
+      }
+    }
+
+    // If problem was found from static lookup, resolve its DB UUID
+    if (problem && !dbProblemUuid) {
+      try {
+        const { data: dbProblem } = await supabase
+          .from('problems')
+          .select('id')
+          .eq('problem_number', problem.number)
+          .maybeSingle();
+
+        if (dbProblem?.id) {
+          dbProblemUuid = dbProblem.id;
+        }
+      } catch (err) {
+        console.warn('[VERIFY_PROOF] DB problem number lookup notice:', err);
+      }
+    }
+  }
+
   if (!problem) {
     return sendJson(res, 400, {
       success: false,
@@ -658,22 +719,8 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  // Find the database UUID for this problem
-  let dbProblemUuid: string = problem.id;
-  if (supabase) {
-    try {
-      const { data: dbProblem } = await supabase
-        .from('problems')
-        .select('id')
-        .eq('problem_number', problem.number)
-        .maybeSingle();
-
-      if (dbProblem?.id) {
-        dbProblemUuid = dbProblem.id;
-      }
-    } catch (e) {
-      console.warn('[VERIFY_PROOF] Problem UUID lookup notice:', e);
-    }
+  if (!dbProblemUuid) {
+    dbProblemUuid = problem.id;
   }
 
   // 5. Concurrency Lock
@@ -732,81 +779,100 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // 7. Validate Image
-    let imageBase64: string | null = null;
+    // 7. Retrieve & Validate Proof Image (Supports storagePath OR imageDataUrl)
     let mimeType = 'image/png';
+    let base64Data = '';
+    const MAX_BYTES = 5 * 1024 * 1024; // Strict 5 MB limit
 
-    // Prioritize fetching from Supabase Storage if storagePath is available
-    if (storagePath && supabase) {
-      const { data: fileData, error: downloadError } = await supabase.storage
+    const isStorageValid = storagePath && typeof storagePath === 'string' && !storagePath.startsWith('local://');
+
+    if (isStorageValid) {
+      // SECURITY CHECK: storagePath MUST start with authenticated user ID folder
+      if (!storagePath.startsWith(`${authenticatedUserId}/`)) {
+        return sendJson(res, 403, {
+          success: false,
+          status: 'UNAUTHORIZED',
+          reason: 'Access denied: You are not authorized to access this storage path.',
+          error: 'UNAUTHORIZED_STORAGE_PATH'
+        });
+      }
+
+      if (!supabase) {
+        return sendJson(res, 500, {
+          success: false,
+          status: 'REVIEW_REQUIRED',
+          reason: 'Storage service is currently unavailable.',
+          error: 'STORAGE_UNAVAILABLE'
+        });
+      }
+
+      const { data: blob, error: downloadErr } = await supabase.storage
         .from('submission-proofs')
         .download(storagePath);
 
-      if (!downloadError && fileData) {
-        mimeType = fileData.type || 'image/png';
-        const arrayBuffer = await fileData.arrayBuffer();
-        imageBase64 = Buffer.from(arrayBuffer).toString('base64');
-      } else if (downloadError) {
-        console.warn('[PROOF_VERIFY] Storage download notice:', downloadError.message);
+      if (downloadErr || !blob) {
+        console.error('[VERIFY_PROOF] Failed to download proof from Supabase Storage:', downloadErr);
+        return sendJson(res, 400, {
+          success: false,
+          status: 'REJECTED',
+          reason: 'Could not read the uploaded proof image from storage.',
+          error: 'STORAGE_DOWNLOAD_FAILED'
+        });
       }
-    }
 
-    // Fallback to inline imageDataUrl
-    if (!imageBase64 && imageDataUrl && typeof imageDataUrl === 'string' && imageDataUrl.startsWith('data:')) {
-      const base64Match = imageDataUrl.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-      if (base64Match) {
-        mimeType = base64Match[1];
-        imageBase64 = base64Match[2];
-      } else {
-        const commaIdx = imageDataUrl.indexOf(',');
-        if (commaIdx !== -1) {
-          const header = imageDataUrl.substring(0, commaIdx);
-          const rawContent = imageDataUrl.substring(commaIdx + 1);
-          const typeMatch = header.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+)/);
-          mimeType = typeMatch ? typeMatch[1] : 'image/png';
-          imageBase64 = Buffer.from(decodeURIComponent(rawContent), 'utf-8').toString('base64');
-        }
+      const arrayBuffer = await blob.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+
+      if (imageBuffer.length > MAX_BYTES) {
+        return sendJson(res, 400, {
+          success: false,
+          status: 'REJECTED',
+          reason: `Image size (${(imageBuffer.length / (1024 * 1024)).toFixed(2)} MB) exceeds the maximum allowed limit of 5 MB.`,
+          error: 'FILE_TOO_LARGE'
+        });
       }
-    }
 
-    if (!imageBase64) {
+      mimeType = detectMimeType(imageBuffer, blob.type);
+      base64Data = imageBuffer.toString('base64');
+
+    } else if (imageDataUrl && typeof imageDataUrl === 'string') {
+      const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return sendJson(res, 400, {
+          success: false,
+          status: 'REJECTED',
+          reason: 'Invalid image format. Expected a base64 Data URL (e.g. data:image/png;base64,...).',
+          error: 'INVALID_IMAGE_FORMAT'
+        });
+      }
+
+      mimeType = matches[1].toLowerCase();
+      base64Data = matches[2];
+      const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedMimeTypes.includes(mimeType)) {
+        return sendJson(res, 400, {
+          success: false,
+          status: 'REJECTED',
+          reason: `Unsupported image format: ${mimeType}. Please upload a PNG, JPEG, or WEBP screenshot.`,
+          error: 'UNSUPPORTED_MIME_TYPE'
+        });
+      }
+
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      if (imageBuffer.length > MAX_BYTES) {
+        return sendJson(res, 400, {
+          success: false,
+          status: 'REJECTED',
+          reason: `Image size (${(imageBuffer.length / (1024 * 1024)).toFixed(2)} MB) exceeds the maximum allowed limit of 5 MB.`,
+          error: 'FILE_TOO_LARGE'
+        });
+      }
+    } else {
       return sendJson(res, 400, {
         success: false,
         status: 'REJECTED',
-        reason: 'Image proof data is missing, invalid, or could not be downloaded.',
-        error: 'Missing image data'
-      });
-    }
-
-    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!allowedMimeTypes.includes(mimeType.toLowerCase())) {
-      return sendJson(res, 400, {
-        success: false,
-        status: 'REJECTED',
-        reason: `Unsupported image format: ${mimeType}. Please upload a PNG, JPEG, or WEBP screenshot.`,
-        error: 'UNSUPPORTED_MIME_TYPE'
-      });
-    }
-
-    let imageBuffer: Buffer;
-    try {
-      imageBuffer = Buffer.from(imageBase64, 'base64');
-    } catch {
-      return sendJson(res, 400, {
-        success: false,
-        status: 'REJECTED',
-        reason: 'Invalid base64 encoding for image data.',
-        error: 'INVALID_BASE64'
-      });
-    }
-
-    const MAX_BYTES = 5 * 1024 * 1024; // Strict 5 MB Limit
-    if (imageBuffer.length > MAX_BYTES) {
-      return sendJson(res, 400, {
-        success: false,
-        status: 'REJECTED',
-        reason: `Image size (${(imageBuffer.length / (1024 * 1024)).toFixed(2)} MB) exceeds the maximum allowed limit of 5 MB.`,
-        error: 'FILE_TOO_LARGE'
+        reason: 'Proof image missing. Expected either storagePath or imageDataUrl.',
+        error: 'MISSING_PROOF_IMAGE'
       });
     }
 
@@ -890,7 +956,7 @@ Respond strictly in JSON according to the schema provided.`;
                 {
                   inlineData: {
                     mimeType: mimeType,
-                    data: imageBase64
+                    data: base64Data
                   }
                 }
               ]
@@ -960,6 +1026,23 @@ Respond strictly in JSON according to the schema provided.`;
 
     // 10. Handle Rejection
     if (!isValidProof) {
+      if (supabase && submissionProofId) {
+        try {
+          await supabase
+            .from('submission_proofs')
+            .update({
+              verification_status: 'FAILED',
+              verification_score: Math.round((geminiResultJson.confidence || 0) * 100),
+              verification_reason: geminiResultJson.reason || 'Verification criteria not satisfied.',
+              ai_result: geminiResultJson
+            })
+            .eq('id', submissionProofId)
+            .eq('user_id', authenticatedUserId);
+        } catch (proofUpdateErr) {
+          console.warn('[VERIFY_PROOF] Rejection proof update notice:', proofUpdateErr);
+        }
+      }
+
       return sendJson(res, 200, {
         success: false,
         status: 'REJECTED',
@@ -999,22 +1082,23 @@ Respond strictly in JSON according to the schema provided.`;
           throw progressError;
         }
 
-        // Optional Audit Record in submission_proofs
-        try {
-          await supabase
-            .from('submission_proofs')
-            .insert({
-              user_id: authenticatedUserId,
-              problem_id: dbProblemUuid,
-              image_url: 'verified://screenshot',
-              verification_status: 'VERIFIED',
-              verification_score: Math.round((geminiResultJson.confidence || 1) * 100),
-              verification_reason: geminiResultJson.reason,
-              ai_result: geminiResultJson,
-              verified_at: new Date().toISOString()
-            });
-        } catch (proofErr) {
-          console.warn('[VERIFY_PROOF] submission_proofs audit write notice:', proofErr);
+        // Update Submission Proof record if provided
+        if (submissionProofId) {
+          try {
+            await supabase
+              .from('submission_proofs')
+              .update({
+                verification_status: 'VERIFIED',
+                verification_score: Math.round((geminiResultJson.confidence || 1) * 100),
+                verification_reason: geminiResultJson.reason,
+                ai_result: geminiResultJson,
+                verified_at: new Date().toISOString()
+              })
+              .eq('id', submissionProofId)
+              .eq('user_id', authenticatedUserId);
+          } catch (proofErr) {
+            console.warn('[VERIFY_PROOF] submission_proofs update notice:', proofErr);
+          }
         }
 
         // Update Profile XP

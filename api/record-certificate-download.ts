@@ -9,15 +9,6 @@ function sendJson(res: any, statusCode: number, data: any) {
   return res.end(JSON.stringify(data));
 }
 
-function getAppBaseUrl(req: any): string {
-  const host = typeof req.get === 'function' ? req.get('host') : req.headers?.host;
-  if (host) {
-    const proto = req.protocol || 'https';
-    return `${proto}://${host}`;
-  }
-  return 'https://dp-quest-isju.vercel.app';
-}
-
 export default async function handler(req: any, res: any) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -57,12 +48,16 @@ export default async function handler(req: any, res: any) {
 
   try {
     if (authHeader && authHeader.startsWith('Bearer ') && isSupabaseLive) {
-      const token = authHeader.replace('Bearer ', '');
+      const token = authHeader.replace('Bearer ', '').trim();
       const userScopedSupabase = createClient(supabaseUrl!, supabaseKey!, {
         global: {
           headers: {
             Authorization: `Bearer ${token}`
           }
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
         }
       });
       const { data: authData } = await userScopedSupabase.auth.getUser(token);
@@ -87,9 +82,6 @@ export default async function handler(req: any, res: any) {
       return sendJson(res, 401, { error: 'Unauthorized: Valid student session token required for certificate download.' });
     }
 
-    const clientIp = req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress;
-    const userAgent = req.headers?.['user-agent'] || '';
-
     let currentDownloadCount = 1;
     let firstDownloadedAt: string | null = downloadedAt;
     let lastDownloadedAt: string | null = downloadedAt;
@@ -97,7 +89,7 @@ export default async function handler(req: any, res: any) {
     if (dbClient) {
       const { data: certRecord } = await dbClient
         .from('certificates')
-        .select('id, download_count, first_downloaded_at')
+        .select('id, user_name, download_count, first_downloaded_at')
         .eq('certificate_id', certificateId)
         .maybeSingle();
 
@@ -115,15 +107,21 @@ export default async function handler(req: any, res: any) {
           })
           .eq('id', certRecord.id);
 
-        await dbClient
-          .from('certificate_downloads')
-          .insert({
-            certificate_id: certRecord.id,
-            user_id: userId,
-            ip_address: typeof clientIp === 'string' ? clientIp.split(',')[0].trim() : null,
-            user_agent: typeof userAgent === 'string' ? userAgent.substring(0, 500) : null,
-            downloaded_at: downloadedAt
-          });
+        try {
+          await dbClient
+            .from('certificate_downloads')
+            .insert({
+              certificate_id: certRecord.id,
+              user_id: userId,
+              user_name: certRecord.user_name,
+              certificate_public_id: certificateId,
+              download_number: currentDownloadCount,
+              downloaded_at: downloadedAt,
+              is_test: false
+            });
+        } catch (auditErr) {
+          console.warn('[RECORD_CERTIFICATE_DOWNLOAD] Audit write notice:', auditErr);
+        }
       }
     }
 

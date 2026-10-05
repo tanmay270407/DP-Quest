@@ -58,12 +58,16 @@ export default async function handler(req: any, res: any) {
 
   try {
     if (authHeader && authHeader.startsWith('Bearer ') && isSupabaseLive) {
-      const token = authHeader.replace('Bearer ', '');
+      const token = authHeader.replace('Bearer ', '').trim();
       const userScopedSupabase = createClient(supabaseUrl!, supabaseKey!, {
         global: {
           headers: {
             Authorization: `Bearer ${token}`
           }
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
         }
       });
       const { data: authData, error: authError } = await userScopedSupabase.auth.getUser(token);
@@ -95,7 +99,7 @@ export default async function handler(req: any, res: any) {
 
       const { data: progressRows, error: progressErr } = await dbClient
         .from('user_progress')
-        .select('xp_awarded, status')
+        .select('xp_earned, status')
         .eq('user_id', userId)
         .eq('status', 'COMPLETED');
 
@@ -104,7 +108,7 @@ export default async function handler(req: any, res: any) {
       }
 
       const completedCount = progressRows?.length || 0;
-      const totalXp = progressRows ? progressRows.reduce((acc: number, r: any) => acc + (r.xp_awarded || 0), 0) : 0;
+      const totalXp = progressRows ? progressRows.reduce((acc: number, r: any) => acc + (r.xp_earned || 0), 0) : 0;
 
       if (completedCount < 25 || totalXp < 250) {
         return sendJson(res, 403, {
@@ -154,14 +158,13 @@ export default async function handler(req: any, res: any) {
           user_name: profileName,
           completed_at: now,
           verification_url: verificationUrl,
-          total_problems: 25,
-          total_xp: 250,
           download_count: 0
         })
         .select()
         .single();
 
       if (createErr) {
+        console.error('[GENERATE_CERTIFICATE] DB create error:', createErr);
         return sendJson(res, 500, { error: 'Failed to create certificate record in database.' });
       }
 

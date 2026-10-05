@@ -13,6 +13,7 @@ export interface DbProfile {
   id: string;
   full_name: string;
   email: string;
+  password?: string | null;
   total_xp: number;
   current_streak: number;
   created_at?: string;
@@ -205,7 +206,12 @@ class SupabaseService {
     }
   }
 
-  async ensureProfile(userId: string, fullName: string, email: string): Promise<DbProfile | null> {
+  async ensureProfile(
+    userId: string, 
+    fullName: string, 
+    email: string, 
+    password?: string
+  ): Promise<DbProfile | null> {
     if (!isSupabaseConfigured() || this.schemaMissing) {
       return this.getLocalProfile(userId, fullName, email);
     }
@@ -229,14 +235,25 @@ class SupabaseService {
       }
 
       if (existing) {
+        // If password is provided and different or missing, update it
+        if (password && existing.password !== password) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({ password, updated_at: new Date().toISOString() })
+              .eq('id', userId);
+          } catch {}
+          existing.password = password;
+        }
         return existing as DbProfile;
       }
 
-      // 2. Create profile
+      // 2. Create profile with password
       const newProfile: Partial<DbProfile> = {
         id: userId,
         full_name: fullName,
         email: email,
+        password: password || null,
         total_xp: 0,
         current_streak: 1
       };

@@ -40,9 +40,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSigningUpRef = useRef<boolean>(false);
 
   // Helper to load or create profile for authenticated user
-  const loadProfile = async (authId: string, email: string, defaultName: string = 'Quest Explorer') => {
+  const loadProfile = async (authId: string, email: string, defaultName: string = 'Quest Explorer', password?: string) => {
     try {
-      const profile = await supabaseService.ensureProfile(authId, defaultName, email);
+      const profile = await supabaseService.ensureProfile(authId, defaultName, email, password);
       if (profile) {
         setUser({
           id: profile.id,
@@ -210,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (data.user) {
-          await supabaseService.ensureProfile(data.user.id, cleanName, cleanEmail);
+          await supabaseService.ensureProfile(data.user.id, cleanName, cleanEmail, pass);
         }
 
         // Determine if email confirmation is required
@@ -288,7 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (data.user) {
           const name = data.user.user_metadata?.full_name || cleanEmail.split('@')[0];
-          await loadProfile(data.user.id, cleanEmail, name);
+          await loadProfile(data.user.id, cleanEmail, name, pass);
           return { success: true };
         }
 

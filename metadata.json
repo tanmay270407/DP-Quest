@@ -1,0 +1,6 @@
+{
+  "name": "DP Quest",
+  "description": "Master Dynamic Programming, One Problem at a Time. Gamified 25-problem Dynamic Programming tracker with proof verification, XP progression, and completion certificate.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

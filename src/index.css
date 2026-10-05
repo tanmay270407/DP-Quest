@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #EBECF0;
+    color: #2D3748;
+  }
+  
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Subtle, Modern Neumorphism Tokens */
+.neu-bg {
+  background-color: #EBECF0;
+}
+
+.neu-raised {
+  background: #EBECF0;
+  box-shadow: 6px 6px 14px rgba(166, 175, 195, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.9);
+}
+
+.neu-raised-sm {
+  background: #EBECF0;
+  box-shadow: 3px 3px 7px rgba(166, 175, 195, 0.42), -3px -3px 7px rgba(255, 255, 255, 0.85);
+}
+
+.neu-raised-lg {
+  background: #EBECF0;
+  box-shadow: 10px 10px 22px rgba(166, 175, 195, 0.48), -10px -10px 22px rgba(255, 255, 255, 0.95);
+}
+
+.neu-raised-interactive {
+  background: #EBECF0;
+  box-shadow: 4px 4px 10px rgba(166, 175, 195, 0.42), -4px -4px 10px rgba(255, 255, 255, 0.85);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neu-raised-interactive:hover {
+  box-shadow: 6px 6px 14px rgba(166, 175, 195, 0.52), -6px -6px 14px rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.neu-raised-interactive:active {
+  box-shadow: inset 3px 3px 6px rgba(166, 175, 195, 0.5), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+  transform: translateY(0);
+}
+
+.neu-inset {
+  background: #EBECF0;
+  box-shadow: inset 3px 3px 6px rgba(166, 175, 195, 0.45), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+}
+
+.neu-inset-sm {
+  background: #EBECF0;
+  box-shadow: inset 2px 2px 4px rgba(166, 175, 195, 0.4), inset -2px -2px 4px rgba(255, 255, 255, 0.75);
+}
+
+.neu-inset-deep {
+  background: #E6E8ED;
+  box-shadow: inset 4px 4px 8px rgba(166, 175, 195, 0.55), inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+}
+
+.neu-pressed {
+  background: #EBECF0;
+  box-shadow: inset 3px 3px 6px rgba(166, 175, 195, 0.48), inset -3px -3px 6px rgba(255, 255, 255, 0.85);
+}
+
+.neu-btn-primary {
+  background: linear-gradient(135deg, #334155, #1E293B);
+  color: #FFFFFF;
+  box-shadow: 4px 4px 12px rgba(166, 175, 195, 0.48), -4px -4px 10px rgba(255, 255, 255, 0.85);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neu-btn-primary:hover {
+  background: linear-gradient(135deg, #1E293B, #0F172A);
+  box-shadow: 5px 5px 14px rgba(166, 175, 195, 0.58), -4px -4px 12px rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.neu-btn-primary:active {
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.4);
+  transform: translateY(0);
+}
+
+.neu-accent-dot {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* Custom scrollbars for neat neumorphic look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #EBECF0;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

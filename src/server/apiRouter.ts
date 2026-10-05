@@ -542,7 +542,7 @@ Canonical URL: ${trustedProblem.url}
 
 Perform strict independent checks and return the structured assessment.`;
 
-    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash'];
+    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'];
     let response: any = null;
     let lastError: any = null;
 

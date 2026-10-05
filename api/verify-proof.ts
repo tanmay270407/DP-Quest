@@ -890,7 +890,14 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const ai = new GoogleGenAI({ apiKey: geminiKey });
+    const ai = new GoogleGenAI({
+      apiKey: geminiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build'
+        }
+      }
+    });
     const prompt = `You are a strict code judge verifying student algorithmic problem submissions.
 Evaluate this screenshot against the expected problem:
 
@@ -942,41 +949,55 @@ Respond strictly in JSON according to the schema provided.`;
 
     let geminiResultJson: any = null;
     let geminiError: any = null;
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'];
+    const modelsToTry = [
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-pro-preview'
+    ];
 
     for (const modelName of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: prompt },
-                {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Data
+                    }
                   }
-                }
-              ]
+                ]
+              }
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: responseSchema,
+              temperature: 0.1
             }
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: responseSchema,
-            temperature: 0.1
-          }
-        });
+          });
 
-        if (response.text) {
-          geminiResultJson = JSON.parse(response.text);
+          if (response.text) {
+            geminiResultJson = JSON.parse(response.text);
+            break;
+          }
+        } catch (err: any) {
+          geminiError = err;
+          console.warn(`[GEMINI_VERIFY] Model ${modelName} (attempt ${attempt + 1}) failed:`, err?.message || err);
+          if (attempt === 0 && (err?.status === 503 || err?.status === 429 || err?.message?.includes('503') || err?.message?.includes('demand'))) {
+            // Short backoff before retry on high demand
+            await new Promise((r) => setTimeout(r, 600));
+            continue;
+          }
           break;
         }
-      } catch (err: any) {
-        geminiError = err;
-        console.warn(`[GEMINI_VERIFY] Model ${modelName} attempt failed:`, err?.message || err);
       }
+      if (geminiResultJson) break;
     }
 
     if (!geminiResultJson) {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   Certificate,
   Problem,
@@ -51,13 +51,14 @@ interface QuestContextType {
 const QuestContext = createContext<QuestContextType | undefined>(undefined);
 
 export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, session, isAuthenticated } = useAuth();
+  const { user, session, isAuthenticated, reloadProfile } = useAuth();
 
   const [problems, setProblems] = useState<Problem[]>(PROBLEMS_DATA);
   const [userProgress, setUserProgress] = useState<Record<string, UserProgress>>({});
   const [submissionProofs, setSubmissionProofs] = useState<Record<string, SubmissionProof>>({});
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
+  const hasLoadedOnceRef = useRef(false);
 
   const [currentView, setCurrentView] = useState<ViewType>('landing');
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(PROBLEMS_DATA[0].id);
@@ -66,17 +67,24 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const [modalProblemId, setModalProblemId] = useState<string | null>(null);
 
-  // Sync / Load database data when user logs in or changes
+  // Sync / Load database data when user logs in or switches account
+  const currentUserId = user?.id;
+  const currentUserName = user?.fullName;
+
   const loadDatabaseData = useCallback(async () => {
-    if (!user) {
+    if (!currentUserId) {
       setUserProgress({});
       setCertificate(null);
       setSubmissionProofs({});
       setIsLoadingData(false);
+      hasLoadedOnceRef.current = false;
       return;
     }
 
-    setIsLoadingData(true);
+    // Only show full-screen skeleton on first initial load, not on background syncs
+    if (!hasLoadedOnceRef.current) {
+      setIsLoadingData(true);
+    }
 
     try {
       // 1. Fetch 22 problems
@@ -84,17 +92,17 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setProblems(loadedProblems);
 
       // 2. Initialize or fetch user progress
-      const progressMap = await supabaseService.initializeUserProgress(user.id, loadedProblems);
+      const progressMap = await supabaseService.initializeUserProgress(currentUserId, loadedProblems);
       setUserProgress(progressMap);
 
       // 3. Fetch certificate if already earned
-      const dbCert = await supabaseService.getCertificate(user.id);
+      const dbCert = await supabaseService.getCertificate(currentUserId);
       if (dbCert) {
         setCertificate({
           id: dbCert.id,
           userId: dbCert.user_id,
           certificateId: dbCert.certificate_id,
-          userName: user.fullName,
+          userName: currentUserName || 'Quest Explorer',
           completedAt: new Date(dbCert.completed_at).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -107,12 +115,13 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         setCertificate(null);
       }
+      hasLoadedOnceRef.current = true;
     } catch (err) {
       console.error('Error synchronizing database data:', err);
     } finally {
       setIsLoadingData(false);
     }
-  }, [user]);
+  }, [currentUserId, currentUserName]);
 
   useEffect(() => {
     loadDatabaseData();
@@ -286,6 +295,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         // Trigger background refresh from Supabase to stay 100% in sync
         await loadDatabaseData();
+        await reloadProfile();
 
         return {
           success: true,
@@ -359,7 +369,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         await supabase
           .from('profiles')
-          .update({ total_xp: 0, completed_count: 0, updated_at: new Date().toISOString() })
+          .update({ total_xp: 0, completed_count: 0, current_streak: 0, updated_at: new Date().toISOString() })
           .eq('id', user.id);
       } catch (e) {
         console.error('Reset error:', e);

@@ -27,6 +27,7 @@ interface AuthContextType {
   clearError: () => void;
   updateProfileName: (newName: string) => Promise<boolean>;
   updateProfileDetails: (newName: string, newSection?: string) => Promise<boolean>;
+  reloadProfile: () => Promise<void>;
 }
 
 const LOCAL_FALLBACK_USER_KEY = 'dp_quest_mock_session';
@@ -46,33 +47,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await supabaseService.ensureProfile(authId, defaultName, email, defaultSection, password);
       if (profile) {
-        setUser({
-          id: profile.id,
-          email: profile.email || email,
-          fullName: profile.full_name || defaultName,
-          section: profile.section || defaultSection || undefined,
-          totalXp: profile.total_xp || 0,
-          currentStreak: profile.current_streak || 1
+        setUser((prev) => {
+          const nextName = profile.full_name || defaultName;
+          const nextEmail = profile.email || email;
+          const nextSection = profile.section || defaultSection || undefined;
+          const nextXp = profile.total_xp || 0;
+          const nextStreak = profile.current_streak !== undefined && profile.current_streak !== null ? profile.current_streak : 0;
+
+          if (
+            prev &&
+            prev.id === profile.id &&
+            prev.email === nextEmail &&
+            prev.fullName === nextName &&
+            prev.section === nextSection &&
+            prev.totalXp === nextXp &&
+            prev.currentStreak === nextStreak
+          ) {
+            return prev;
+          }
+
+          return {
+            id: profile.id,
+            email: nextEmail,
+            fullName: nextName,
+            section: nextSection,
+            totalXp: nextXp,
+            currentStreak: nextStreak
+          };
         });
       } else {
-        setUser({
+        setUser((prev) => {
+          if (
+            prev &&
+            prev.id === authId &&
+            prev.email === email &&
+            prev.fullName === defaultName &&
+            prev.section === defaultSection &&
+            prev.totalXp === 0 &&
+            prev.currentStreak === 0
+          ) {
+            return prev;
+          }
+          return {
+            id: authId,
+            email: email,
+            fullName: defaultName,
+            section: defaultSection || undefined,
+            totalXp: 0,
+            currentStreak: 0
+          };
+        });
+      }
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      setUser((prev) => {
+        if (
+          prev &&
+          prev.id === authId &&
+          prev.email === email &&
+          prev.fullName === defaultName &&
+          prev.section === defaultSection &&
+          prev.totalXp === 0 &&
+          prev.currentStreak === 0
+        ) {
+          return prev;
+        }
+        return {
           id: authId,
           email: email,
           fullName: defaultName,
           section: defaultSection || undefined,
           totalXp: 0,
-          currentStreak: 1
-        });
-      }
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      setUser({
-        id: authId,
-        email: email,
-        fullName: defaultName,
-        section: defaultSection || undefined,
-        totalXp: 0,
-        currentStreak: 1
+          currentStreak: 0
+        };
       });
     }
   };
@@ -427,6 +474,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return updateProfileDetails(newName, user?.section);
   };
 
+  const reloadProfile = async () => {
+    if (!user) return;
+    try {
+      const profile = await supabaseService.getProfile(user.id);
+      if (profile) {
+        setUser((prev) => {
+          if (!prev) return null;
+          const nextName = profile.full_name || prev.fullName;
+          const nextSection = profile.section || prev.section;
+          const nextXp = profile.total_xp !== undefined ? profile.total_xp : prev.totalXp;
+          const nextStreak = profile.current_streak !== undefined && profile.current_streak !== null ? profile.current_streak : 0;
+
+          if (
+            prev.fullName === nextName &&
+            prev.section === nextSection &&
+            prev.totalXp === nextXp &&
+            prev.currentStreak === nextStreak
+          ) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            fullName: nextName,
+            section: nextSection,
+            totalXp: nextXp,
+            currentStreak: nextStreak
+          };
+        });
+      }
+    } catch {}
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -442,7 +522,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetPassword,
         clearError,
         updateProfileName,
-        updateProfileDetails
+        updateProfileDetails,
+        reloadProfile
       }}
     >
       {children}

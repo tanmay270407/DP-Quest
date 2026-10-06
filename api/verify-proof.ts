@@ -1127,30 +1127,43 @@ Respond strictly in JSON according to the schema provided.`;
           }
         }
 
-        // Update Profile XP
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('total_xp')
-          .eq('id', authenticatedUserId)
-          .maybeSingle();
+        // Update Profile XP, completed_count, and current_streak
+        const { data: completedRows } = await supabase
+          .from('user_progress')
+          .select('completed_at, updated_at, created_at')
+          .eq('user_id', authenticatedUserId)
+          .eq('status', 'COMPLETED');
 
-        newTotalXp = (profile?.total_xp || 0) + xpAwarded;
+        completedCount = completedRows?.length || 1;
+        newTotalXp = Math.min(220, completedCount * 10);
+
+        // Calculate unique completion days for streak
+        const uniqueDates = new Set<string>();
+        completedRows?.forEach((r: any) => {
+          const ts = r.completed_at || r.updated_at || r.created_at;
+          if (ts) {
+            try {
+              const d = new Date(ts);
+              if (!isNaN(d.getTime())) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                uniqueDates.add(`${year}-${month}-${day}`);
+              }
+            } catch {}
+          }
+        });
+        const currentStreak = uniqueDates.size;
 
         await supabase
           .from('profiles')
           .update({
             total_xp: newTotalXp,
+            completed_count: completedCount,
+            current_streak: currentStreak,
             updated_at: new Date().toISOString()
           })
           .eq('id', authenticatedUserId);
-
-        const { count } = await supabase
-          .from('user_progress')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', authenticatedUserId)
-          .eq('status', 'COMPLETED');
-
-        completedCount = count || 1;
       } catch (dbErr: any) {
         console.error('[VERIFY_PROOF] Database update failed:', dbErr);
         return sendJson(res, 500, {

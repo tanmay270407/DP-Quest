@@ -129,7 +129,7 @@ class SupabaseService {
       section: section || null,
       total_xp: 0,
       completed_count: 0,
-      current_streak: 1
+      current_streak: 0
     };
     try {
       localStorage.setItem(`dpquest_profile_${userId}`, JSON.stringify(profile));
@@ -279,7 +279,7 @@ class SupabaseService {
         password: password || null,
         total_xp: 0,
         completed_count: 0,
-        current_streak: 1
+        current_streak: 0
       };
 
       const { data: created, error: insertErr } = await supabase
@@ -303,12 +303,44 @@ class SupabaseService {
     }
   }
 
-  async updateProfileStats(userId: string, completedCount: number): Promise<void> {
+  calculateUniqueCompletionDays(progressMap: Record<string, UserProgress>): number {
+    const uniqueDates = new Set<string>();
+    Object.values(progressMap).forEach((p) => {
+      if (p.status === 'COMPLETED') {
+        let dateStr: string | null = null;
+        if (p.completedAt) {
+          try {
+            const d = new Date(p.completedAt);
+            if (!isNaN(d.getTime())) {
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              dateStr = `${year}-${month}-${day}`;
+            }
+          } catch {}
+        }
+        if (!dateStr) {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          dateStr = `${year}-${month}-${day}`;
+        }
+        uniqueDates.add(dateStr);
+      }
+    });
+    return uniqueDates.size;
+  }
+
+  async updateProfileStats(userId: string, completedCount: number, streakDays?: number): Promise<void> {
     const totalXp = completedCount * 10;
     if (!isSupabaseConfigured() || this.schemaMissing) {
       const p = this.getLocalProfile(userId, '', '');
       p.total_xp = totalXp;
       p.completed_count = completedCount;
+      if (streakDays !== undefined) {
+        p.current_streak = streakDays;
+      }
       try {
         localStorage.setItem(`dpquest_profile_${userId}`, JSON.stringify(p));
       } catch {}
@@ -316,13 +348,18 @@ class SupabaseService {
     }
 
     try {
+      const updateData: any = {
+        total_xp: totalXp,
+        completed_count: completedCount,
+        updated_at: new Date().toISOString()
+      };
+      if (streakDays !== undefined) {
+        updateData.current_streak = streakDays;
+      }
+
       await supabase
         .from('profiles')
-        .update({
-          total_xp: totalXp,
-          completed_count: completedCount,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', userId);
     } catch {}
   }
@@ -591,7 +628,8 @@ class SupabaseService {
       this.syncProgressToSupabase(userId, reconciledMap, existing || []);
 
       const completedCount = Object.values(reconciledMap).filter((p) => p.status === 'COMPLETED').length;
-      await this.updateProfileStats(userId, completedCount);
+      const streakDays = this.calculateUniqueCompletionDays(reconciledMap);
+      await this.updateProfileStats(userId, completedCount, streakDays);
 
       return reconciledMap;
     } catch (e) {
@@ -631,7 +669,8 @@ class SupabaseService {
     this.saveLocalProgress(userId, reconciled);
 
     const completedCount = Object.values(reconciled).filter((p) => p.status === 'COMPLETED').length;
-    await this.updateProfileStats(userId, completedCount);
+    const streakDays = this.calculateUniqueCompletionDays(reconciled);
+    await this.updateProfileStats(userId, completedCount, streakDays);
 
     if (!isSupabaseConfigured() || this.schemaMissing) {
       return { success: true, nextProblemId };

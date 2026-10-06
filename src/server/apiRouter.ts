@@ -680,11 +680,21 @@ Perform strict independent checks and return the structured assessment.`;
     // 9. If Gemini is unavailable, FAIL SAFELY. NEVER auto-verify or award XP.
     if (!response?.text) {
       console.warn('[PROOF_VERIFY] All Gemini models unavailable or failed. Safely returning 503.');
+      const isQuota = (
+        lastError?.status === 429 ||
+        String(lastError?.message).includes('429') ||
+        String(lastError?.message).includes('quota') ||
+        String(lastError?.message).includes('RESOURCE_EXHAUSTED')
+      );
+      const userReason = isQuota
+        ? 'AI verification daily quota reached for the free tier. Please try again in a moment or upload another proof.'
+        : 'AI verification service is temporarily unavailable. Please try submitting again in a moment.';
+
       return sendJson(res, 503, {
         success: false,
         status: 'REVIEW_REQUIRED',
         score: 0,
-        reason: 'AI verification service is temporarily unavailable. Please try submitting again in a moment.',
+        reason: userReason,
         problemCompleted: false,
         xp_earned: 0,
         error: lastError?.message || 'Gemini service unavailable'
@@ -930,26 +940,45 @@ Perform strict independent checks and return the structured assessment.`;
               }
             }
 
-            // Calculate total XP accurately from completed problems
+            // Calculate total XP accurately and streak from completed problems
             try {
               const { data: completedRows } = await dbClient
                 .from('user_progress')
-                .select('xp_earned')
+                .select('completed_at, updated_at, created_at, xp_earned')
                 .eq('user_id', userId)
                 .eq('status', 'COMPLETED');
 
               finalCompletedCount = Math.max(1, completedRows?.length || 1);
               finalTotalXp = Math.min(220, finalCompletedCount * 10);
 
+              const uniqueDates = new Set<string>();
+              completedRows?.forEach((r: any) => {
+                const ts = r.completed_at || r.updated_at || r.created_at;
+                if (ts) {
+                  try {
+                    const d = new Date(ts);
+                    if (!isNaN(d.getTime())) {
+                      const year = d.getFullYear();
+                      const month = String(d.getMonth() + 1).padStart(2, '0');
+                      const day = String(d.getDate()).padStart(2, '0');
+                      uniqueDates.add(`${year}-${month}-${day}`);
+                    }
+                  } catch {}
+                }
+              });
+              const finalStreak = uniqueDates.size;
+
               await dbClient
                 .from('profiles')
-                .upsert({
-                  id: userId,
+                .update({
                   total_xp: finalTotalXp,
+                  completed_count: finalCompletedCount,
+                  current_streak: finalStreak,
                   updated_at: now
-                });
+                })
+                .eq('id', userId);
             } catch (e: any) {
-              console.warn('Profile XP update notice:', e?.message || e);
+              console.warn('Profile XP/streak update notice:', e?.message || e);
             }
           }
         }
@@ -1104,20 +1133,39 @@ export async function handleGenerateCertificate(req: any, res: any) {
       const baseUrl = getAppBaseUrl(req);
       const verificationUrl = `${baseUrl}/verify/${certificateId}`;
 
-      const { data: newCert, error: createErr } = await dbClient
+      const certPayload: any = {
+        user_id: userId,
+        certificate_id: certificateId,
+        user_name: profileName,
+        completed_at: now,
+        verification_url: verificationUrl,
+        download_count: 0
+      };
+
+      let newCert: any = null;
+      let createErr: any = null;
+
+      const resWithCols = await dbClient
         .from('certificates')
         .insert({
-          user_id: userId,
-          certificate_id: certificateId,
-          user_name: profileName,
-          completed_at: now,
-          verification_url: verificationUrl,
+          ...certPayload,
           total_problems: 22,
-          total_xp: 220,
-          download_count: 0
+          total_xp: 220
         })
         .select()
         .single();
+
+      if (resWithCols.error) {
+        const resPlain = await dbClient
+          .from('certificates')
+          .insert(certPayload)
+          .select()
+          .single();
+        newCert = resPlain.data;
+        createErr = resPlain.error;
+      } else {
+        newCert = resWithCols.data;
+      }
 
       if (createErr && !isTableMissingError(createErr)) {
         return sendJson(res, 500, { error: 'Failed to create certificate record in database.' });

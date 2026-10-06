@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS public.certificates (
 
 -- Ensure columns exist if table was created in an earlier schema iteration
 ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS user_name TEXT;
+ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS total_problems INTEGER DEFAULT 22;
+ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS total_xp INTEGER DEFAULT 220;
 ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS download_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS first_downloaded_at TIMESTAMPTZ;
 ALTER TABLE public.certificates ADD COLUMN IF NOT EXISTS last_downloaded_at TIMESTAMPTZ;

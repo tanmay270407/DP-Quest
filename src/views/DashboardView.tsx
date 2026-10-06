@@ -5,9 +5,7 @@ import { NeumorphicCard } from '../components/common/NeumorphicCard';
 import { NeumorphicProgressBar } from '../components/common/NeumorphicProgressBar';
 import { 
   Flame, 
-  Sparkles, 
-  Check, 
-  Lock 
+  Sparkles 
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -15,17 +13,8 @@ export const DashboardView: React.FC = () => {
   const { 
     completedCount, 
     totalXp, 
-    problems, 
-    userProgress, 
-    nextUnlockedProblem, 
-    selectProblem, 
-    navigateTo,
-    isQuestComplete,
     isLoadingData
   } = useQuest();
-
-  // Next problem to solve: either the next available or the first one if all done or none
-  const currentTargetProblem = nextUnlockedProblem || problems[problems.length - 1];
 
   if (isLoadingData) {
     return (
@@ -35,7 +24,6 @@ export const DashboardView: React.FC = () => {
           <div className="h-4 w-72 rounded-lg neu-inset" />
         </div>
         <div className="h-36 rounded-2xl neu-raised" />
-        <div className="h-48 rounded-2xl neu-raised" />
       </div>
     );
   }
@@ -58,7 +46,7 @@ export const DashboardView: React.FC = () => {
           <div className="neu-inset px-3.5 py-2 rounded-xl flex items-center gap-2">
             <Flame className="w-4 h-4 text-amber-500" />
             <span className="text-xs font-semibold text-gray-700">
-              {user?.currentStreak || 1} days streak
+              {user?.currentStreak ?? 0} days streak
             </span>
           </div>
 
@@ -108,76 +96,6 @@ export const DashboardView: React.FC = () => {
           </span>
         </div>
       </NeumorphicCard>
-
-      {/* Compact 22-Problem Progress Indicator */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-bold tracking-wide uppercase text-gray-500">
-            Roadmap Overview (22 Problems)
-          </h2>
-          <button 
-            onClick={() => navigateTo('problems')}
-            className="text-xs text-gray-500 hover:text-gray-900 font-medium"
-          >
-            View Full List →
-          </button>
-        </div>
-
-        <NeumorphicCard variant="raised-sm" className="p-4 md:p-5">
-          <div className="grid grid-cols-5 sm:grid-cols-11 md:grid-cols-22 gap-2">
-            {problems.map((prob) => {
-              const status = userProgress[prob.id]?.status || 'LOCKED';
-              const isCompleted = status === 'COMPLETED';
-              const isAvailable = status === 'AVAILABLE';
-              const isCurrent = prob.id === currentTargetProblem.id && !isQuestComplete;
-
-              return (
-                <button
-                  key={prob.id}
-                  onClick={() => selectProblem(prob.id)}
-                  disabled={status === 'LOCKED'}
-                  title={`${prob.number}. ${prob.title} (${status})`}
-                  className={`relative flex flex-col items-center justify-center h-12 rounded-xl text-xs font-mono font-medium transition-all ${
-                    isCompleted
-                      ? 'neu-pressed text-emerald-700 bg-emerald-500/10 font-bold'
-                      : isCurrent
-                      ? 'neu-raised font-bold text-gray-900 ring-2 ring-slate-800'
-                      : isAvailable
-                      ? 'neu-raised-interactive text-gray-800'
-                      : 'neu-inset-sm text-gray-400 opacity-40 cursor-not-allowed'
-                  }`}
-                >
-                  <span className="text-[11px] leading-none">
-                    {prob.number.toString().padStart(2, '0')}
-                  </span>
-                  {isCompleted ? (
-                    <Check className="w-3 h-3 text-emerald-600 mt-1 stroke-[3]" />
-                  ) : status === 'LOCKED' ? (
-                    <Lock className="w-2.5 h-2.5 text-gray-400 mt-1 opacity-70" />
-                  ) : (
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 mt-1" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] text-gray-500 mt-4 pt-3 border-t border-gray-300/40 px-1">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
-              Completed ({completedCount})
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-800 inline-block" />
-              Available ({problems.filter(p => userProgress[p.id]?.status === 'AVAILABLE').length})
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block" />
-              Locked ({problems.filter(p => userProgress[p.id]?.status === 'LOCKED').length})
-            </span>
-          </div>
-        </NeumorphicCard>
-      </div>
     </div>
   );
 };

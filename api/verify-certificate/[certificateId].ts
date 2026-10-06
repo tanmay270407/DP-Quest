@@ -41,6 +41,8 @@ export default async function handler(req: any, res: any) {
         .maybeSingle();
 
       if (cert) {
+        const host = req.headers?.['x-forwarded-host'] || req.headers?.host || 'dp-quest-isju.vercel.app';
+        const proto = req.headers?.['x-forwarded-proto'] || 'https';
         return sendJson(res, 200, {
           isValid: true,
           isTest: rawId.includes('-TEST'),
@@ -49,7 +51,7 @@ export default async function handler(req: any, res: any) {
           completedAt: cert.completed_at,
           totalProblems: 22,
           totalXp: 220,
-          verificationUrl: cert.verification_url || `https://dp-quest-isju.vercel.app/verify/${cert.certificate_id}`
+          verificationUrl: cert.verification_url || `${proto}://${host}/verify/${cert.certificate_id}`
         });
       }
     }

@@ -8,6 +8,7 @@ interface AuthUser {
   id: string;
   email: string;
   fullName: string;
+  section?: string;
   totalXp: number;
   currentStreak: number;
 }
@@ -19,12 +20,13 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   isConfigured: boolean;
-  signUp: (name: string, email: string, pass: string, confirmPass: string) => Promise<{ success: boolean; message?: string; email?: string; error?: string }>;
+  signUp: (name: string, email: string, section: string, pass: string, confirmPass: string) => Promise<{ success: boolean; message?: string; email?: string; error?: string }>;
   signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   clearError: () => void;
   updateProfileName: (newName: string) => Promise<boolean>;
+  updateProfileDetails: (newName: string, newSection?: string) => Promise<boolean>;
 }
 
 const LOCAL_FALLBACK_USER_KEY = 'dp_quest_mock_session';
@@ -40,14 +42,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSigningUpRef = useRef<boolean>(false);
 
   // Helper to load or create profile for authenticated user
-  const loadProfile = async (authId: string, email: string, defaultName: string = 'Quest Explorer', password?: string) => {
+  const loadProfile = async (authId: string, email: string, defaultName: string = 'Quest Explorer', defaultSection?: string, password?: string) => {
     try {
-      const profile = await supabaseService.ensureProfile(authId, defaultName, email, password);
+      const profile = await supabaseService.ensureProfile(authId, defaultName, email, defaultSection, password);
       if (profile) {
         setUser({
           id: profile.id,
           email: profile.email || email,
           fullName: profile.full_name || defaultName,
+          section: profile.section || defaultSection || undefined,
           totalXp: profile.total_xp || 0,
           currentStreak: profile.current_streak || 1
         });
@@ -56,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: authId,
           email: email,
           fullName: defaultName,
+          section: defaultSection || undefined,
           totalXp: 0,
           currentStreak: 1
         });
@@ -66,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: authId,
         email: email,
         fullName: defaultName,
+        section: defaultSection || undefined,
         totalXp: 0,
         currentStreak: 1
       });
@@ -88,7 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (initialSession && initialSession.user) {
             setSession(initialSession);
             const userMetaName = initialSession.user.user_metadata?.full_name || initialSession.user.email?.split('@')[0] || 'User';
-            await loadProfile(initialSession.user.id, initialSession.user.email || '', userMetaName);
+            const userMetaSection = initialSession.user.user_metadata?.section;
+            await loadProfile(initialSession.user.id, initialSession.user.email || '', userMetaName, userMetaSection);
           } else {
             setSession(null);
             setUser(null);
@@ -130,7 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (newSession && newSession.user) {
           const name = newSession.user.user_metadata?.full_name || newSession.user.email?.split('@')[0] || 'User';
-          await loadProfile(newSession.user.id, newSession.user.email || '', name);
+          const section = newSession.user.user_metadata?.section;
+          await loadProfile(newSession.user.id, newSession.user.email || '', name, section);
         } else {
           setUser(null);
         }
@@ -150,15 +157,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearError = () => setError(null);
 
-  const signUp = async (name: string, email: string, pass: string, confirmPass: string) => {
+  const signUp = async (name: string, email: string, section: string, pass: string, confirmPass: string) => {
     setError(null);
 
     // Validation
     const cleanName = name.trim();
     const cleanEmail = email.trim();
+    const cleanSection = section.trim();
 
     if (!cleanName) {
       const msg = 'Please enter your full name.';
+      setError(msg);
+      return { success: false, error: msg };
+    }
+
+    if (!cleanSection) {
+      const msg = 'Please enter your class or section.';
       setError(msg);
       return { success: false, error: msg };
     }
@@ -190,7 +204,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           password: pass,
           options: {
             data: {
-              full_name: cleanName
+              full_name: cleanName,
+              section: cleanSection
             }
           }
         });
@@ -210,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (data.user) {
-          await supabaseService.ensureProfile(data.user.id, cleanName, cleanEmail, pass);
+          await supabaseService.ensureProfile(data.user.id, cleanName, cleanEmail, cleanSection, pass);
         }
 
         // Determine if email confirmation is required
@@ -368,24 +383,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateProfileName = async (newName: string): Promise<boolean> => {
-    const clean = newName.trim();
-    if (!clean || !user) return false;
+  const updateProfileDetails = async (newName: string, newSection?: string): Promise<boolean> => {
+    const cleanName = newName.trim();
+    const cleanSection = newSection?.trim() || '';
+    if (!cleanName || !user) return false;
 
     if (isConfigured) {
       try {
         const { error } = await supabase
           .from('profiles')
-          .update({ full_name: clean, updated_at: new Date().toISOString() })
+          .update({ 
+            full_name: cleanName, 
+            section: cleanSection || null,
+            updated_at: new Date().toISOString() 
+          })
           .eq('id', user.id);
 
         if (!error) {
-          // Sync auth user metadata so session reloads retain the updated name
+          // Sync auth user metadata so session reloads retain the updated details
           await supabase.auth.updateUser({
-            data: { full_name: clean }
+            data: { full_name: cleanName, section: cleanSection }
           }).catch(() => {});
 
-          setUser((prev) => prev ? { ...prev, fullName: clean } : null);
+          setUser((prev) => prev ? { ...prev, fullName: cleanName, section: cleanSection || undefined } : null);
           return true;
         }
         return false;
@@ -395,12 +415,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setUser((prev) => {
         if (!prev) return null;
-        const updated = { ...prev, fullName: clean };
+        const updated = { ...prev, fullName: cleanName, section: cleanSection || undefined };
         localStorage.setItem(LOCAL_FALLBACK_USER_KEY, JSON.stringify(updated));
         return updated;
       });
       return true;
     }
+  };
+
+  const updateProfileName = async (newName: string): Promise<boolean> => {
+    return updateProfileDetails(newName, user?.section);
   };
 
   return (
@@ -417,7 +441,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         resetPassword,
         clearError,
-        updateProfileName
+        updateProfileName,
+        updateProfileDetails
       }}
     >
       {children}

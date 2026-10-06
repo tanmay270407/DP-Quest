@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export const ProfileView: React.FC = () => {
-  const { user, signOut, updateProfileName } = useAuth();
+  const { user, signOut, updateProfileDetails } = useAuth();
   const { 
     totalXp, 
     completedCount, 
@@ -23,6 +23,7 @@ export const ProfileView: React.FC = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(user?.fullName || '');
+  const [sectionInput, setSectionInput] = useState(user?.section || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -38,7 +39,7 @@ export const ProfileView: React.FC = () => {
     e.preventDefault();
     if (!nameInput.trim()) return;
     setIsSaving(true);
-    await updateProfileName(nameInput.trim());
+    await updateProfileDetails(nameInput.trim(), sectionInput.trim());
     setIsSaving(false);
     setIsEditing(false);
   };
@@ -79,11 +80,18 @@ export const ProfileView: React.FC = () => {
               {user?.fullName?.charAt(0) || 'U'}
             </div>
 
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">
-                {user?.fullName || 'Quest Explorer'}
-              </h2>
-              <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-gray-900">
+                  {user?.fullName || 'Quest Explorer'}
+                </h2>
+                {user?.section && (
+                  <span className="px-2 py-0.5 rounded-md neu-inset text-[11px] font-mono text-slate-700 font-semibold">
+                    {user.section}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-gray-400" />
                 {user?.email || 'user@example.com'}
               </p>
@@ -95,28 +103,45 @@ export const ProfileView: React.FC = () => {
             variant="secondary"
             onClick={() => {
               setNameInput(user?.fullName || '');
+              setSectionInput(user?.section || '');
               setIsEditing(!isEditing);
             }}
             icon={<Edit2 className="w-3 h-3 text-gray-500" />}
           >
-            {isEditing ? 'Cancel' : 'Edit Name'}
+            {isEditing ? 'Cancel' : 'Edit Profile'}
           </NeumorphicButton>
         </div>
 
-        {/* Edit Name Form */}
+        {/* Edit Profile Form */}
         {isEditing && (
           <form onSubmit={handleSave} className="p-4 rounded-2xl neu-inset space-y-3 pt-3">
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500">
-                Full Name (appears on your Certificate)
-              </label>
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl neu-inset-sm text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-[#EBECF0]"
-                required
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-gray-500">
+                  Full Name (for Certificate)
+                </label>
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl neu-inset-sm text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-[#EBECF0]"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-gray-500">
+                  Class / Section
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 41, 42"
+                  value={sectionInput}
+                  onChange={(e) => setSectionInput(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl neu-inset-sm text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-[#EBECF0]"
+                  required
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-1">
@@ -124,7 +149,7 @@ export const ProfileView: React.FC = () => {
                 Email cannot be modified directly.
               </span>
               <NeumorphicButton size="sm" variant="primary" type="submit" disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Name'}
+                {isSaving ? 'Saving...' : 'Save Profile'}
               </NeumorphicButton>
             </div>
           </form>

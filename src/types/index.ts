@@ -93,6 +93,7 @@ export interface DbProfile {
   id: string;
   full_name: string | null;
   email: string | null;
+  section?: string | null;
   password?: string | null;
   total_xp: number;
   completed_count: number;

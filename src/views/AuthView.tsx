@@ -30,6 +30,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
 
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(initialMode);
   const [name, setName] = useState('');
+  const [section, setSection] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,13 +51,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
 
     try {
       if (mode === 'signup') {
-        const res = await signUp(name, email, password, confirmPassword);
+        const res = await signUp(name, email, section, password, confirmPassword);
         if (res.success) {
           // Switch to Sign In mode - DO NOT automatically log in or redirect to dashboard
           setMode('login');
           setPassword('');
           setConfirmPassword('');
           setName('');
+          setSection('');
           if (res.email) {
             setEmail(res.email);
           }
@@ -161,22 +163,41 @@ export const AuthView: React.FC<AuthViewProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block">
-                Full Name
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Alex Rivera"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl neu-inset-sm text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-[#EBECF0]"
-                />
-                <UserIcon className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Alex Rivera"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl neu-inset-sm text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-[#EBECF0]"
+                  />
+                  <UserIcon className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                </div>
               </div>
-            </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block">
+                  Class / Section
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 41, 42"
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl neu-inset-sm text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-[#EBECF0]"
+                  />
+                  <ShieldCheck className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                </div>
+              </div>
+            </>
           )}
 
           <div className="space-y-1.5">

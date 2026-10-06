@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
   email TEXT,
+  section TEXT,
   password TEXT,
   total_xp INTEGER DEFAULT 0,
   completed_count INTEGER DEFAULT 0,
@@ -19,9 +20,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Ensure password and completed_count columns exist if table was already created
+-- Ensure password, completed_count, and section columns exist if table was already created
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS completed_count INTEGER DEFAULT 0;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS section TEXT;
 
 -- 2. PROBLEMS TABLE
 CREATE TABLE IF NOT EXISTS public.problems (

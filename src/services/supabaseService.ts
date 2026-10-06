@@ -13,6 +13,7 @@ export interface DbProfile {
   id: string;
   full_name: string;
   email: string;
+  section?: string | null;
   password?: string | null;
   total_xp: number;
   completed_count: number;
@@ -111,11 +112,13 @@ class SupabaseService {
   // ========================================================
   // LOCAL STORAGE FALLBACK HELPERS
   // ========================================================
-  private getLocalProfile(userId: string, fullName: string, email: string): DbProfile {
+  private getLocalProfile(userId: string, fullName: string, email: string, section?: string): DbProfile {
     try {
       const stored = localStorage.getItem(`dpquest_profile_${userId}`);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (section && !parsed.section) parsed.section = section;
+        return parsed;
       }
     } catch {}
 
@@ -123,6 +126,7 @@ class SupabaseService {
       id: userId,
       full_name: fullName,
       email: email,
+      section: section || null,
       total_xp: 0,
       completed_count: 0,
       current_streak: 1
@@ -212,10 +216,11 @@ class SupabaseService {
     userId: string, 
     fullName: string, 
     email: string, 
+    section?: string,
     password?: string
   ): Promise<DbProfile | null> {
     if (!isSupabaseConfigured() || this.schemaMissing) {
-      return this.getLocalProfile(userId, fullName, email);
+      return this.getLocalProfile(userId, fullName, email, section);
     }
 
     try {
@@ -229,7 +234,7 @@ class SupabaseService {
       if (fetchErr) {
         if (this.isTableMissingError(fetchErr)) {
           this.setSchemaMissing(true);
-          return this.getLocalProfile(userId, fullName, email);
+          return this.getLocalProfile(userId, fullName, email, section);
         }
         if (fetchErr.code !== 'PGRST116') {
           console.warn('Profile fetch notice:', fetchErr.message);
@@ -237,24 +242,40 @@ class SupabaseService {
       }
 
       if (existing) {
-        // If password is provided and different or missing, update it
+        let needsUpdate = false;
+        const updates: any = {};
+
         if (password && existing.password !== password) {
+          updates.password = password;
+          existing.password = password;
+          needsUpdate = true;
+        }
+
+        if (section && existing.section !== section) {
+          updates.section = section;
+          existing.section = section;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          updates.updated_at = new Date().toISOString();
           try {
             await supabase
               .from('profiles')
-              .update({ password, updated_at: new Date().toISOString() })
+              .update(updates)
               .eq('id', userId);
           } catch {}
-          existing.password = password;
         }
+
         return existing as DbProfile;
       }
 
-      // 2. Create profile with password
+      // 2. Create profile with section & password
       const newProfile: Partial<DbProfile> = {
         id: userId,
         full_name: fullName,
         email: email,
+        section: section || null,
         password: password || null,
         total_xp: 0,
         completed_count: 0,
@@ -270,15 +291,15 @@ class SupabaseService {
       if (insertErr) {
         if (this.isTableMissingError(insertErr)) {
           this.setSchemaMissing(true);
-          return this.getLocalProfile(userId, fullName, email);
+          return this.getLocalProfile(userId, fullName, email, section);
         }
         console.warn('Profile creation notice:', insertErr.message);
-        return this.getLocalProfile(userId, fullName, email);
+        return this.getLocalProfile(userId, fullName, email, section);
       }
 
       return created as DbProfile;
     } catch (e) {
-      return this.getLocalProfile(userId, fullName, email);
+      return this.getLocalProfile(userId, fullName, email, section);
     }
   }
 
